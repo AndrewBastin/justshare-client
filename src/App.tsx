@@ -8,10 +8,11 @@ import { fileSizeSI } from './api/Size';
 import PeerFileSend from './api/file/PeerFileSend';
 import PeerFileReceive from './api/file/PeerFileReceive';
 import FileSaver from 'file-saver';
+import PeerInfo from './api/PeerInfo';
 
 interface State {
     
-    peers: string[],
+    peers: PeerInfo[],
     
     socketID: string,
     
@@ -26,7 +27,9 @@ interface State {
 
     waitingForAccept: boolean,
 
-    currentScreen: 'share-with' | 'select-file' | 'recieve' | 'recieving' | 'sending'
+    nickname: string | null,
+
+    currentScreen: 'nickname' | 'share-with' | 'select-file' | 'recieve' | 'recieving' | 'sending'
 
 }
 
@@ -44,24 +47,33 @@ export default class App extends React.Component<{}, State> {
             bytesReceived: 0,
             bytesSent: 0,
             waitingForAccept: false,
-            currentScreen: 'share-with'
+            nickname: window.localStorage.getItem("nickname"),
+            currentScreen: window.localStorage.getItem("nickname") ? 'share-with' : 'nickname'
         };
     }
 
     componentDidMount() {
+        if (this.state.nickname) {
+            this.setupPeerAndSocket();
+        }
+    }
+
+    setupPeerAndSocket() {
         this.peer = new Peer();
 
-        this.socket = io("https://justshare-server.herokuapp.com/");
+        //this.socket = io("https://justshare-server.herokuapp.com/");
+        this.socket = io("localhost:2299");
 
         this.socket.on('connect', () => {
 
-            console.log(`Socket connected, ID : ${this.socket.id}`);
+            if (this.state.nickname) this.socket.emit("declare nickname", this.state.nickname);
 
+            console.log(`Socket connected, ID : ${this.socket.id}`);
             this.socket.on('peer joined', (peerID: string) => {
                 console.log(`Peer Joined ${peerID}`);
 
                 this.setState({
-                    peers: [...this.state.peers, peerID]
+                    peers: [...this.state.peers, { peerID: peerID }]
                 });
 
             });
@@ -70,11 +82,11 @@ export default class App extends React.Component<{}, State> {
                 console.log(`Peer Left ${peerID}`);
                 
                 this.setState({
-                    peers: this.state.peers.filter(p => p !== peerID)
+                    peers: this.state.peers.filter(p => p.peerID !== peerID)
                 });
             });
 
-            this.socket.on('peer list', (peerIDs: string[]) => {
+            this.socket.on('peer list', (peerIDs: PeerInfo[]) => {
                 console.log("Peer List");
 
                 this.setState({
@@ -91,6 +103,12 @@ export default class App extends React.Component<{}, State> {
                     currentScreen: 'recieve',
                     fileRequest: req
                 });
+            });
+
+            this.socket.on("shout nickname", (peer: PeerInfo) => {
+                this.setState({
+                    peers: [...this.state.peers.filter(p => p.peerID !== peer.peerID), peer]
+                })
             });
 
             this.setState({
@@ -113,9 +131,11 @@ export default class App extends React.Component<{}, State> {
                 <div className="App-ListHeading">Share With</div>
                 <div>
                     {
-                        this.state.peers.map((id, index) => {
+                        this.state.peers.map((peer, index) => {
                             return (
-                                <a className="App-ListItem" key={index} onClick={() => this.onShareWithPeerClick(id)}>{id}</a>
+                                <a className="App-ListItem" key={index} onClick={() => this.onShareWithPeerClick(peer.peerID)}>{
+                                    (peer.nickname) ? peer.nickname : peer.peerID
+                                }</a>
                             );
                         })
                     }
@@ -203,11 +223,12 @@ export default class App extends React.Component<{}, State> {
     }
 
     renderRecieveFile(): JSX.Element {
+        let senderInfo = this.state.peers.find(p => p.peerID === this.state.fileRequest!!.senderSocketID)
         return (
             <div>
                 <div className="App-ListHeading">Recieve</div>
                 <p>
-                    {this.state.fileRequest!!.senderSocketID} wants to send 
+                    { senderInfo ? senderInfo.nickname : this.state.fileRequest!!.senderSocketID } wants to send 
                     &nbsp;{this.state.fileRequest!!.filename} ({fileSizeSI(this.state.fileRequest!!.filesizeBytes)}) <br />
                     <br />
                     <br />
@@ -276,8 +297,29 @@ export default class App extends React.Component<{}, State> {
         )
     }
 
+    renderNicknamePage(): JSX.Element {
+        // TODO : Nickname validation
+        return (
+            <div>
+                <div className="App-ListHeading">Nickname</div>
+                <div>Enter the nickname (you will be shown on other devices with this name) : </div>
+                <input value={ this.state.nickname ? this.state.nickname : "" } onChange={(ev) => this.setState({ nickname: ev.target.value }) }/>
+                
+                <button onClick={(ev) => {
+                    this.setupPeerAndSocket();
+                    window.localStorage.setItem("nickname", this.state.nickname as string);
+                    this.setState({ currentScreen: 'share-with' });
+                }}>
+                    Done
+                </button>
+            </div>
+        )
+    }
+
     renderCurrentPage(): JSX.Element {
-        if (this.state.currentScreen === 'share-with') {
+        if (this.state.currentScreen === 'nickname') {
+            return this.renderNicknamePage();
+        } else if (this.state.currentScreen === 'share-with') {
             return this.renderShareWith();
         } else if (this.state.currentScreen === 'select-file') {
             return this.renderSelectFile();
@@ -300,7 +342,7 @@ export default class App extends React.Component<{}, State> {
         return (
             <div className="App">
                 <h3 style={{ textAlign: 'center' }}>JustShare [Alpha 3]</h3>
-                <p style={{ textAlign: 'center' }}>You are : {this.state.socketID}</p>
+                <p style={{ textAlign: 'center' }}>You are : {this.state.nickname ? `${this.state.nickname} (id : ${this.state.socketID})` : this.state.socketID}</p>
                 { this.renderCurrentPage() }
             </div>
         )
