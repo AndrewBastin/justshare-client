@@ -24,6 +24,8 @@ interface State {
     bytesReceived: number,
     bytesSent: number,
 
+    waitingForAccept: boolean,
+
     currentScreen: 'share-with' | 'select-file' | 'recieve' | 'recieving' | 'sending'
 
 }
@@ -41,6 +43,7 @@ export default class App extends React.Component<{}, State> {
             socketID: '',
             bytesReceived: 0,
             bytesSent: 0,
+            waitingForAccept: false,
             currentScreen: 'share-with'
         };
     }
@@ -122,12 +125,21 @@ export default class App extends React.Component<{}, State> {
     }
 
     renderSelectFile(): JSX.Element {
-        return (
-            <div>
-                <div className="App-ListHeading">Select File</div>
-                <input type="file" onChange={ (ev) => this.handleFileSelected(ev) }></input>
-            </div>
-        );
+        if (!this.state.waitingForAccept) {
+            return (
+                <div>
+                    <div className="App-ListHeading">Select File</div>
+                    <input type="file" onChange={ (ev) => this.handleFileSelected(ev) }></input>
+                </div>
+            );
+        } else {
+            return (
+                <div>
+                    <div className="App-ListHeading">Select File</div>
+                    <div>Waiting for the reciever to accept...</div>
+                </div>
+            );
+        }
     }
 
     handleFileSelected(ev: React.ChangeEvent<HTMLInputElement>) {
@@ -181,6 +193,10 @@ export default class App extends React.Component<{}, State> {
                 currentScreen: 'sending'
             });
 
+        });
+
+        this.setState({
+            waitingForAccept: true
         });
 
         console.log(request);
