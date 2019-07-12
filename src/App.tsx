@@ -283,7 +283,7 @@ export default class App extends React.Component<{}, State> {
     public render(): JSX.Element {
         return (
             <div className="App">
-                <h3 style={{ textAlign: 'center' }}>JustShare [Alpha 1]</h3>
+                <h3 style={{ textAlign: 'center' }}>JustShare [Alpha 2]</h3>
                 <p style={{ textAlign: 'center' }}>You are : {this.state.socketID}</p>
                 { this.renderCurrentPage() }
             </div>
