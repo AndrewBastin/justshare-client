@@ -158,6 +158,9 @@ export default class App extends React.Component<{}, State> {
                     })
                     .on('complete', () => {
                         console.log("complete")
+                        
+                        window.location.reload(true);
+
                     })
                     .on('cancel', () => {
                         console.log("cancel")
@@ -214,6 +217,8 @@ export default class App extends React.Component<{}, State> {
                     let blob = new Blob(file.data, { type: file.type })
                     console.log(file)
                     FileSaver.saveAs(blob, file.name)
+
+                    window.location.reload(true);
 
                     console.log('complete')
                 })
