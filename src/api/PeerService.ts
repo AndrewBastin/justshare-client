@@ -30,7 +30,6 @@ export default class PeerService extends EventEmitter<Events> {
 	private nickname!: string;
 
 	private socket!: SocketIOClient.Socket;
-	private peer!: Peer;
 
 	private peers!: PeerInfo[];
 
@@ -39,7 +38,6 @@ export default class PeerService extends EventEmitter<Events> {
 
 		this.nickname = nickname;
 		this.socket = io(url);
-		this.peer = new Peer();
 
 		this.peers = [];
 
@@ -73,23 +71,27 @@ export default class PeerService extends EventEmitter<Events> {
 			this.socket.on('file share', (req: FileSendRequest) => {
 				// TODO : Handle auto denial when no listeners attached
 
-				(this.emit('fileSendRequest', req) as Promise<boolean>)
-					.then((accept) => {
-						if (accept) {
-							
-							let conn = this.peer.connect(req.senderPeerID);
+				let peer = new Peer();
+				peer.on('open', (id) => {
 
-							conn.on("open", () => {
+					(this.emit('fileSendRequest', req) as Promise<boolean>)
+						.then((accept) => {
+							if (accept) {
+								
+								let conn = peer.connect(req.senderPeerID);
 
-								// NOTE : Don't forget to call the start function to start the transfer!
-								this.emit("fileReceiverSession", new PeerFileReceive(conn));
+								conn.on("open", () => {
 
-							});
+									// NOTE : Don't forget to call the start function to start the transfer!
+									this.emit("fileReceiverSession", new PeerFileReceive(conn));
 
-						} else {
-							// TODO : Implement denial
-						}
-					})
+								});
+
+							} else {
+								// TODO : Implement denial
+							}
+						})
+				});
 			});
 
 			// Called when a peer announces a nickname
@@ -111,31 +113,42 @@ export default class PeerService extends EventEmitter<Events> {
 		return this.nickname;
 	}
 
-	sendFileSendRequest(recipientID: string, file: File): FileSendRequest {
-		let request: FileSendRequest = {
-			shareID: guid(),
-			senderSocketID: this.socket.id,
-			senderPeerID: this.peer.id,
-			recieverSocketID: recipientID,
-			filename: file.name,
-			filesizeBytes: file.size
-		}
+	sendFileSendRequest(recipientID: string, file: File): Promise<FileSendRequest> {
 
-		this.socket.emit('req file share', request);
+		return new Promise((resolve, reject) => {
 
-		this.peer.on("connection", (conn) => {
+			let peer = new Peer();
+
+			peer.on("connection", (conn) => {
 
 
-			conn.on("open", () => {
+				conn.on("open", () => {
 
-				// NOTE : Don't forget to call the start function to start the transfer!
-				this.emit('fileSenderSession', new PeerFileSend(conn, file));
-			
+					// NOTE : Don't forget to call the start function to start the transfer!
+					this.emit('fileSenderSession', new PeerFileSend(conn, file));
+				
+				});
+
 			});
+
+			peer.on('open', (peerID: string) => {
+				let request = {
+					shareID: guid(),
+					senderSocketID: this.socket.id,
+					senderPeerID: peerID,
+					recieverSocketID: recipientID,
+					filename: file.name,
+					filesizeBytes: file.size
+				}
+
+				this.socket.emit('req file share', request);
+
+				resolve(request);
+			});
+
 
 		});
 
-		return request;
 	}
 
 }

@@ -129,7 +129,7 @@ export default class App extends React.Component<{}, State> {
         }
     }
 
-    handleFileSelected(ev: React.ChangeEvent<HTMLInputElement>) {
+    async handleFileSelected(ev: React.ChangeEvent<HTMLInputElement>) {
         console.log(ev.target.files)
 
         let file = ev.target.files!![0]
@@ -139,7 +139,7 @@ export default class App extends React.Component<{}, State> {
         });
 
         if (this.state.selectedPeerID) {
-            let req = this.peerService.sendFileSendRequest(this.state.selectedPeerID, file);
+            let req = await this.peerService.sendFileSendRequest(this.state.selectedPeerID, file);
 
             this.peerService.on('fileSenderSession', (session) => {
 
