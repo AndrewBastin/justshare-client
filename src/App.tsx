@@ -5,6 +5,9 @@ import { fileSizeSI } from './api/Size';
 import FileSaver from 'file-saver';
 import PeerInfo from './api/PeerInfo';
 import PeerService from './api/PeerService';
+import TransferProgress from './components/TransferProgress/TransferProgress';
+import PeerFileSend from './api/file/PeerFileSend';
+import PeerFileReceive from './api/file/PeerFileReceive';
 
 interface State {
     
@@ -16,11 +19,10 @@ interface State {
     
     fileRequest?: FileSendRequest,
     fileRequestAcceptCallback?: (accept: boolean) => void,
+    transferSession?: PeerFileSend | PeerFileReceive,
+
 
     fileToSend?: File,
-
-    bytesReceived: number,
-    bytesSent: number,
 
     waitingForAccept: boolean,
 
@@ -40,8 +42,6 @@ export default class App extends React.Component<{}, State> {
         this.state = {
             peers: [],
             socketID: '',
-            bytesReceived: 0,
-            bytesSent: 0,
             waitingForAccept: false,
             nickname: window.localStorage.getItem("nickname"),
             currentScreen: window.localStorage.getItem("nickname") ? 'share-with' : 'nickname'
@@ -158,16 +158,10 @@ export default class App extends React.Component<{}, State> {
                     .on('cancel', () => {
                         console.log("cancel");
                     })
-                    .on('progress', (bytesSent: number) => {
-
-                        this.setState({
-                            bytesSent: bytesSent
-                        })
-
-                    })
                     .start();
 
                 this.setState({
+                    transferSession: session,
                     fileRequest: req,
                     currentScreen: 'sending'
                 });
@@ -218,20 +212,16 @@ export default class App extends React.Component<{}, State> {
                 .on('cancel', () => {
                     console.log("cancel");
                 })
-                .on('progress', (file, bytesReceived: number) => {
-                    this.setState({
-                        bytesReceived: bytesReceived
-                    })
-                })
                 .start();
+
+                this.setState({
+                    transferSession: session,
+                    currentScreen: 'recieving'
+                })
         });
 
         // TODO : Handle not case
         if (this.state.fileRequestAcceptCallback) this.state.fileRequestAcceptCallback(true);
-
-        this.setState({
-            currentScreen: 'recieving'
-        })
 
     }
 
@@ -239,8 +229,7 @@ export default class App extends React.Component<{}, State> {
         return (
             <div>
                 <div className="App-ListHeading">Recieving</div>
-                <div>{this.state.fileRequest!!.filename}</div>
-                <div>{fileSizeSI(this.state.bytesReceived)}/{fileSizeSI(this.state.fileRequest!!.filesizeBytes)} ({Math.floor((this.state.bytesReceived / this.state.fileRequest!!.filesizeBytes) * 100)}%)</div>
+                <TransferProgress req={this.state.fileRequest!!} session={this.state.transferSession!!} />
             </div>
         )
     }
@@ -249,8 +238,7 @@ export default class App extends React.Component<{}, State> {
         return (
             <div>
                 <div className="App-ListHeading">Sending</div>
-                <div>{this.state.fileRequest!!.filename}</div>
-                <div>{fileSizeSI(this.state.bytesSent)}/{fileSizeSI(this.state.fileRequest!!.filesizeBytes)} ({Math.floor((this.state.bytesSent / this.state.fileRequest!!.filesizeBytes) * 100)}%)</div>
+                <TransferProgress req={this.state.fileRequest!!} session={this.state.transferSession!!} />
             </div>
         )
     }
