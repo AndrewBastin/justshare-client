@@ -1,14 +1,10 @@
 import React from 'react';
 import './App.css';
-import io from 'socket.io-client';
 import FileSendRequest from './api/FileSendRequest';
-import Peer from 'peerjs';
-import { guid } from './api/Crypto';
 import { fileSizeSI } from './api/Size';
-import PeerFileSend from './api/file/PeerFileSend';
-import PeerFileReceive from './api/file/PeerFileReceive';
 import FileSaver from 'file-saver';
 import PeerInfo from './api/PeerInfo';
+import PeerService from './api/PeerService';
 
 interface State {
     
@@ -19,6 +15,7 @@ interface State {
     selectedPeerID?: string,
     
     fileRequest?: FileSendRequest,
+    fileRequestAcceptCallback?: (accept: boolean) => void,
 
     fileToSend?: File,
 
@@ -35,8 +32,7 @@ interface State {
 
 export default class App extends React.Component<{}, State> {
     
-    private socket!: SocketIOClient.Socket;
-    private peer!: Peer;
+    private peerService!: PeerService;
 
     constructor(props: {}, ctx: any) {
         super(props, ctx);
@@ -54,68 +50,39 @@ export default class App extends React.Component<{}, State> {
 
     componentDidMount() {
         if (this.state.nickname) {
-            this.setupPeerAndSocket();
+            this.setupPeerService();
         }
     }
 
-    setupPeerAndSocket() {
-        this.peer = new Peer();
+    setupPeerService() {
 
-        this.socket = io("https://justshare-server.herokuapp.com/");
-        //this.socket = io("localhost:2299");
+        let url = "https://justshare-server.herokuapp.com";
+        // let url = "localhost:2299";
 
-        this.socket.on('connect', () => {
+        this.peerService = new PeerService(url, this.state.nickname!!);
 
-            if (this.state.nickname) this.socket.emit("declare nickname", this.state.nickname);
-
-            console.log(`Socket connected, ID : ${this.socket.id}`);
-            this.socket.on('peer joined', (peerID: string) => {
-                console.log(`Peer Joined ${peerID}`);
-
-                this.setState({
-                    peers: [...this.state.peers, { peerID: peerID }]
-                });
-
-            });
-
-            this.socket.on('peer left', (peerID: string) => {
-                console.log(`Peer Left ${peerID}`);
-                
-                this.setState({
-                    peers: this.state.peers.filter(p => p.peerID !== peerID)
-                });
-            });
-
-            this.socket.on('peer list', (peerIDs: PeerInfo[]) => {
-                console.log("Peer List");
-
-                this.setState({
-                    peers: peerIDs
-                });
-            });
-
-            this.socket.on('file share', (req: FileSendRequest) => {
-                console.log("File Share");
-                console.log(req);
-
-                // TODO : Implement
-                this.setState({
-                    currentScreen: 'recieve',
-                    fileRequest: req
-                });
-            });
-
-            this.socket.on("shout nickname", (peer: PeerInfo) => {
-                this.setState({
-                    peers: [...this.state.peers.filter(p => p.peerID !== peer.peerID), peer]
-                })
-            });
+        this.peerService.on("sockConnected", (sock) => {
+            console.log(`Socket connected, ID : ${this.peerService.getSockID()}`);
 
             this.setState({
-                socketID: this.socket.id
+                socketID: this.peerService.getSockID()
+            })
+        });
+
+        this.peerService.on("peerUpdate", (peers) => {
+            this.setState({ peers: peers })
+        });
+
+        this.peerService.on("fileSendRequest", (req) => new Promise((resolve, reject) => {
+
+            this.setState({
+                currentScreen: 'recieve',
+                fileRequest: req,
+                fileRequestAcceptCallback: resolve
             });
 
-        });
+        }));
+
     }
 
     onShareWithPeerClick(peerID: string) {
@@ -167,59 +134,48 @@ export default class App extends React.Component<{}, State> {
 
         let file = ev.target.files!![0]
 
-        let request: FileSendRequest = {
-            shareID: guid(),
-            senderSocketID: this.socket.id,
-            senderPeerID: this.peer.id,
-            recieverSocketID: this.state.selectedPeerID || "", // TODO : Handle null selectedPeerID
-            filename: file.name,
-            filesizeBytes: file.size
-
-        }
-        this.socket.emit('req file share', request);
-
-        this.peer.on("connection", (conn) => {
-
-            conn.on("open", () => {
-                new PeerFileSend(conn, file)
-                    .on('accept', () => {
-                        console.log('accept')
-                    })
-                    .on('reject', () => {
-                        console.log("reject")
-                    })
-                    .on('complete', () => {
-                        console.log("complete")
-                        
-                        window.location.reload(true);
-
-                    })
-                    .on('cancel', () => {
-                        console.log("cancel")
-                    })
-                    .on('progress', (bytesSent: number) => {
-                        
-                        this.setState({
-                            bytesSent: bytesSent
-                        })
-                    })
-                    .start()
-            })
-                
-
-            // TODO : Implement connection stuff
-            this.setState({
-                fileRequest: request,
-                currentScreen: 'sending'
-            });
-
-        });
-
         this.setState({
             waitingForAccept: true
         });
 
-        console.log(request);
+        if (this.state.selectedPeerID) {
+            let req = this.peerService.sendFileSendRequest(this.state.selectedPeerID, file);
+
+            this.peerService.on('fileSenderSession', (session) => {
+
+                session
+                    .on('accept', () => {
+                        console.log("accept");
+                    })
+                    .on('reject', () => {
+                        console.log("reject");
+                    })
+                    .on('complete', () => {
+                        console.log("complete");
+
+                        window.location.reload(true);
+                    })
+                    .on('cancel', () => {
+                        console.log("cancel");
+                    })
+                    .on('progress', (bytesSent: number) => {
+
+                        this.setState({
+                            bytesSent: bytesSent
+                        })
+
+                    })
+                    .start();
+
+                this.setState({
+                    fileRequest: req,
+                    currentScreen: 'sending'
+                });
+            })
+
+        } else {
+            // TODO : Handle this
+        }
     }
 
     renderRecieveFile(): JSX.Element {
@@ -242,39 +198,41 @@ export default class App extends React.Component<{}, State> {
     }
 
     handleRecieveAccept() {
-        let conn = this.peer.connect(this.state.fileRequest!!.senderPeerID)
-        conn.on("open", () => {
 
-            let receive = new PeerFileReceive(conn)
+        this.peerService.on('fileReceiverSession', (session) => {
+
+            session
                 .on('incoming', (file) => {
-                    console.log('incoming')
-                    receive.accept(file) || receive.reject(file)
+                    console.log("incoming");
+                    session.accept(file)
                 })
                 .on('complete', (file) => {
-                    let blob = new Blob(file.data, { type: file.type })
-                    console.log(file)
-                    FileSaver.saveAs(blob, file.name)
+                    let blob = new Blob(file.data, { type: file.type });
+                    console.log(file);
+                    FileSaver.saveAs(blob, file.name);
 
                     window.location.reload(true);
 
-                    console.log('complete')
+                    console.log("complete");
                 })
                 .on('cancel', () => {
-                    console.log('cancel')
+                    console.log("cancel");
                 })
                 .on('progress', (file, bytesReceived: number) => {
                     this.setState({
                         bytesReceived: bytesReceived
                     })
                 })
-                
-            receive.start()
+                .start();
+        });
 
-            this.setState({
-                currentScreen: 'recieving'
-            })
+        // TODO : Handle not case
+        if (this.state.fileRequestAcceptCallback) this.state.fileRequestAcceptCallback(true);
+
+        this.setState({
+            currentScreen: 'recieving'
         })
-        // TODO : Implement
+
     }
 
     renderRecieving() {
@@ -306,7 +264,7 @@ export default class App extends React.Component<{}, State> {
                 <input value={ this.state.nickname ? this.state.nickname : "" } onChange={(ev) => this.setState({ nickname: ev.target.value }) }/>
                 
                 <button onClick={(ev) => {
-                    this.setupPeerAndSocket();
+                    this.setupPeerService();
                     window.localStorage.setItem("nickname", this.state.nickname as string);
                     this.setState({ currentScreen: 'share-with' });
                 }}>
