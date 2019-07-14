@@ -7,6 +7,7 @@ import PeerInfo from './api/PeerInfo';
 import PeerService from './api/PeerService';
 import TransferProgress from './components/TransferProgress/TransferProgress';
 import JobInfo from './api/JobInfo';
+import TransfersList from './components/TransfersList/TransfersList';
 
 interface State {
     
@@ -16,9 +17,8 @@ interface State {
     
     selectedPeerID?: string,
        
-    fileRequest?: FileSendRequest, 
+    fileRequest?: FileSendRequest | null, 
     fileRequestAcceptCallback?: (accept: boolean) => void,
-    jobs: JobInfo[],
 
     fileToSend?: File,
 
@@ -26,8 +26,7 @@ interface State {
 
     nickname: string | null,
 
-    currentScreen: 'nickname' | 'share-with' | 'select-file' | 'recieve' | 'recieving' | 'sending'
-
+    currentScreen: 'nickname' | 'share-with' | 'select-file' | 'recieve'
 }
 
 export default class App extends React.Component<{}, State> {
@@ -43,11 +42,10 @@ export default class App extends React.Component<{}, State> {
             waitingForAccept: false,
             nickname: window.localStorage.getItem("nickname"),
             currentScreen: window.localStorage.getItem("nickname") ? 'share-with' : 'nickname',
-            jobs: []
         };
     }
 
-    componentDidMount() {
+    componentWillMount() {
         if (this.state.nickname) {
             this.setupPeerService();
         }
@@ -82,14 +80,6 @@ export default class App extends React.Component<{}, State> {
 
         }));
 
-        this.peerService.on("jobsUpdate", (jobs) => {
-
-            this.setState({
-                jobs: jobs
-            });
-
-        });
-
     }
 
     onShareWithPeerClick(peerID: string) {
@@ -102,6 +92,7 @@ export default class App extends React.Component<{}, State> {
     renderShareWith(): JSX.Element {
         return (
             <div>
+                <TransfersList />
                 <div className="App-ListHeading">Share With</div>
                 <div>
                     {
@@ -159,8 +150,6 @@ export default class App extends React.Component<{}, State> {
                     })
                     .on('complete', () => {
                         console.log("complete");
-
-                        window.location.reload(true);
                     })
                     .on('cancel', () => {
                         console.log("cancel");
@@ -168,7 +157,9 @@ export default class App extends React.Component<{}, State> {
                     .start();
 
                 this.setState({
-                    currentScreen: 'sending'
+                    currentScreen: 'share-with',
+                    waitingForAccept: false,
+                    fileRequest: null
                 });
             })
 
@@ -210,8 +201,6 @@ export default class App extends React.Component<{}, State> {
                     console.log(file);
                     FileSaver.saveAs(blob, file.name);
 
-                    window.location.reload(true);
-
                     console.log("complete");
                 })
                 .on('cancel', () => {
@@ -220,43 +209,13 @@ export default class App extends React.Component<{}, State> {
                 .start();
 
                 this.setState({
-                    currentScreen: 'recieving'
+                    currentScreen: 'share-with'
                 })
         });
 
         // TODO : Handle not case
         if (this.state.fileRequestAcceptCallback) this.state.fileRequestAcceptCallback(true);
 
-    }
-
-    renderRecieving() {
-        return (
-            <div>
-                <div className="App-ListHeading">Recieving</div>
-                {
-                    this.state.jobs.map((job, index) => { 
-                        return (
-                            <TransferProgress key={index} job={job} />
-                        );
-                    })
-                }
-            </div>
-        )
-    }
-
-    renderSending() {
-        return (
-            <div>
-                <div className="App-ListHeading">Sending</div>
-                {
-                    this.state.jobs.map((job, index) => {
-                        return (
-                            <TransferProgress key={index} job={job} />
-                        )
-                    })
-                }
-            </div>
-        )
     }
 
     renderNicknamePage(): JSX.Element {
@@ -287,10 +246,6 @@ export default class App extends React.Component<{}, State> {
             return this.renderSelectFile();
         } else if (this.state.currentScreen === 'recieve') {
             return this.renderRecieveFile();  
-        } else if (this.state.currentScreen === 'recieving') {
-            return this.renderRecieving();
-        } else if (this.state.currentScreen === 'sending') {
-            return this.renderSending();
         } else {
             return (
                 <div>
