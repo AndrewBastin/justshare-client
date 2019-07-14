@@ -6,6 +6,7 @@ import FileSendRequest from './FileSendRequest';
 import PeerFileSend from './file/PeerFileSend';
 import PeerFileReceive from './file/PeerFileReceive';
 import { guid } from './Crypto';
+import JobInfo from './JobInfo';
 
 interface Events {
 
@@ -23,7 +24,11 @@ interface Events {
 
 	// Emitted when the file send request was accepted by the user
 	fileReceiverSession(session: PeerFileReceive): void
+
+	// Called when a new job is added or removed
+	jobsUpdate(jobs: JobInfo[]): void
 }
+
 
 export default class PeerService extends EventEmitter<Events> {
 
@@ -33,6 +38,9 @@ export default class PeerService extends EventEmitter<Events> {
 
 	private peers!: PeerInfo[];
 
+	// Jobs are stored with the request's share id as key
+	private jobs!: Map<string, JobInfo>;
+
 	constructor(url: string, nickname: string) {
 		super();
 
@@ -40,6 +48,7 @@ export default class PeerService extends EventEmitter<Events> {
 		this.socket = io(url);
 
 		this.peers = [];
+		this.jobs = new Map<string, JobInfo>();
 
 		
 		this.socket.on('connect', () => {
@@ -82,9 +91,14 @@ export default class PeerService extends EventEmitter<Events> {
 
 								conn.on("open", () => {
 
-									// NOTE : Don't forget to call the start function to start the transfer!
-									this.emit("fileReceiverSession", new PeerFileReceive(conn));
+									let receive = new PeerFileReceive(conn);
 
+									this.jobs.set(req.shareID, { request: req, session: receive });
+
+									// NOTE : Don't forget to call the start function to start the transfer!
+									this.emit("fileReceiverSession", receive);
+
+									this.emit('jobsUpdate', Array.from(this.jobs.values()));
 								});
 
 							} else {
@@ -119,17 +133,6 @@ export default class PeerService extends EventEmitter<Events> {
 
 			let peer = new Peer();
 
-			peer.on("connection", (conn) => {
-
-
-				conn.on("open", () => {
-
-					// NOTE : Don't forget to call the start function to start the transfer!
-					this.emit('fileSenderSession', new PeerFileSend(conn, file));
-				
-				});
-
-			});
 
 			peer.on('open', (peerID: string) => {
 				let request = {
@@ -140,6 +143,23 @@ export default class PeerService extends EventEmitter<Events> {
 					filename: file.name,
 					filesizeBytes: file.size
 				}
+
+				peer.on("connection", (conn) => {
+
+					conn.on("open", () => {
+
+						let send = new PeerFileSend(conn, file);
+
+						this.jobs.set(request.shareID, { request: request, session: send });
+
+						// NOTE : Don't forget to call the start function to start the transfer!
+						this.emit('fileSenderSession', send);
+
+						this.emit('jobsUpdate', Array.from(this.jobs.values()));
+					
+					});
+
+				});
 
 				this.socket.emit('req file share', request);
 

@@ -6,8 +6,7 @@ import FileSaver from 'file-saver';
 import PeerInfo from './api/PeerInfo';
 import PeerService from './api/PeerService';
 import TransferProgress from './components/TransferProgress/TransferProgress';
-import PeerFileSend from './api/file/PeerFileSend';
-import PeerFileReceive from './api/file/PeerFileReceive';
+import JobInfo from './api/JobInfo';
 
 interface State {
     
@@ -16,11 +15,10 @@ interface State {
     socketID: string,
     
     selectedPeerID?: string,
-    
-    fileRequest?: FileSendRequest,
+       
+    fileRequest?: FileSendRequest, 
     fileRequestAcceptCallback?: (accept: boolean) => void,
-    transferSession?: PeerFileSend | PeerFileReceive,
-
+    jobs: JobInfo[],
 
     fileToSend?: File,
 
@@ -44,7 +42,8 @@ export default class App extends React.Component<{}, State> {
             socketID: '',
             waitingForAccept: false,
             nickname: window.localStorage.getItem("nickname"),
-            currentScreen: window.localStorage.getItem("nickname") ? 'share-with' : 'nickname'
+            currentScreen: window.localStorage.getItem("nickname") ? 'share-with' : 'nickname',
+            jobs: []
         };
     }
 
@@ -82,6 +81,14 @@ export default class App extends React.Component<{}, State> {
             });
 
         }));
+
+        this.peerService.on("jobsUpdate", (jobs) => {
+
+            this.setState({
+                jobs: jobs
+            });
+
+        });
 
     }
 
@@ -139,7 +146,7 @@ export default class App extends React.Component<{}, State> {
         });
 
         if (this.state.selectedPeerID) {
-            let req = await this.peerService.sendFileSendRequest(this.state.selectedPeerID, file);
+            await this.peerService.sendFileSendRequest(this.state.selectedPeerID, file);
 
             this.peerService.on('fileSenderSession', (session) => {
 
@@ -161,8 +168,6 @@ export default class App extends React.Component<{}, State> {
                     .start();
 
                 this.setState({
-                    transferSession: session,
-                    fileRequest: req,
                     currentScreen: 'sending'
                 });
             })
@@ -215,7 +220,6 @@ export default class App extends React.Component<{}, State> {
                 .start();
 
                 this.setState({
-                    transferSession: session,
                     currentScreen: 'recieving'
                 })
         });
@@ -229,7 +233,13 @@ export default class App extends React.Component<{}, State> {
         return (
             <div>
                 <div className="App-ListHeading">Recieving</div>
-                <TransferProgress req={this.state.fileRequest!!} session={this.state.transferSession!!} />
+                {
+                    this.state.jobs.map((job, index) => { 
+                        return (
+                            <TransferProgress key={index} job={job} />
+                        );
+                    })
+                }
             </div>
         )
     }
@@ -238,7 +248,13 @@ export default class App extends React.Component<{}, State> {
         return (
             <div>
                 <div className="App-ListHeading">Sending</div>
-                <TransferProgress req={this.state.fileRequest!!} session={this.state.transferSession!!} />
+                {
+                    this.state.jobs.map((job, index) => {
+                        return (
+                            <TransferProgress key={index} job={job} />
+                        )
+                    })
+                }
             </div>
         )
     }
