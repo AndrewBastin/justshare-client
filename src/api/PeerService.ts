@@ -32,6 +32,23 @@ interface Events {
 
 export default class PeerService extends EventEmitter<Events> {
 
+	// Singleton stuff
+	private static instance: PeerService;
+
+	static createInstance(url: string, nickname: string): PeerService {
+		PeerService.instance = new PeerService(url, nickname);
+
+		return PeerService.instance;
+	}
+
+	static getInstance(): PeerService {
+		return PeerService.instance;
+	}
+
+
+
+
+
 	private nickname!: string;
 
 	private socket!: SocketIOClient.Socket;
@@ -41,7 +58,7 @@ export default class PeerService extends EventEmitter<Events> {
 	// Jobs are stored with the request's share id as key
 	private jobs!: Map<string, JobInfo>;
 
-	constructor(url: string, nickname: string) {
+	private constructor(url: string, nickname: string) {
 		super();
 
 		this.nickname = nickname;

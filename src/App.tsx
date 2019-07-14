@@ -58,7 +58,7 @@ export default class App extends React.Component<{}, State> {
         let url = "https://justshare-server.herokuapp.com";
         // let url = "localhost:2299";
 
-        this.peerService = new PeerService(url, this.state.nickname!!);
+        this.peerService = PeerService.createInstance(url, this.state.nickname!!);
 
         this.peerService.on("sockConnected", (sock) => {
             console.log(`Socket connected, ID : ${this.peerService.getSockID()}`);
