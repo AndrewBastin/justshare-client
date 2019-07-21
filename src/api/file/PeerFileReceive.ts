@@ -1,114 +1,61 @@
-import { EventEmitter } from 'events';
-import { DataConnection } from 'peerjs';
-import FileTransferInfo from './FileTransferInfo';
+import { EventEmitter } from "ee-ts";
+import SimplePeer from "simple-peer";
+import FileSendRequest from "../FileSendRequest";
+import FileTransferInfo from "./FileTransferInfo";
 
-export default class PeerFileReceive extends EventEmitter {
+interface Events {
 
-    received!: any
-    connection!: DataConnection
+    progress(bytesCompleted: number): void,
+    done(receivedFile: Blob, filename: string): void
 
+}
 
-    constructor(conn: DataConnection) {
-        super()
+export default class PeerFileReceive extends EventEmitter<Events> {
 
-        this.received = {}
-        this.connection = conn
+    private peer: SimplePeer.Instance;
+    private req: FileSendRequest;
 
-        this.handle = this.handle.bind(this)
+    private receivedData: any[];
+
+    private fileType!: string;
+    private chunkSizeBytes!: number;
+    private receivedChunkCount!: number;
+    private chunkCount!: number;
+
+    constructor(peer: SimplePeer.Instance, req: FileSendRequest) {
+        super();
+
+        this.peer = peer;
+        this.req = req;
+
+        this.receivedData = [];
     }
 
     start() {
-        this.connection.on('data', this.handle)
-    }
+        this.peer.on('data', (receivedDataString: string) => {
+            let data = JSON.parse(receivedDataString) as FileTransferInfo;
+            
+            
+            if (data.type === 'file:start') {
+                console.log(data);
+                this.chunkCount = data.meta.totalChunks;
+                this.receivedChunkCount = 0;
+                this.chunkSizeBytes = data.meta.chunkSize;
+                this.fileType = data.meta.type;
 
-    handle(data: FileTransferInfo) {
-        var file = this.received[data.id] || {}
+                this.emit('progress', 0);
+            } else if (data.type === 'file:chunk') {
+                this.receivedData.push(Uint8Array.from(data.chunk.data));
 
-        if (data.type === 'file:start') {
+                this.receivedChunkCount++;
 
-            file = data.meta
-            file.id = data.id
-            file.accepted = false
-            file.cancelled = false
-            file.data = []
-
-            this.received[data.id] = file
-            this.emit('incoming', file)
-        }
-
-        else if (data.type === 'file:chunk' && file.accepted && !file.cancelled) {
-            file.data.push(data.chunk)
-
-            var receivedBytes = file.data.length * file.chunkSize
-            if (receivedBytes > file.size) {
-                receivedBytes = file.size
+                this.emit('progress', Math.min(this.chunkSizeBytes * this.receivedChunkCount, this.req.filesizeBytes));
+            } else if (data.type === 'file:end') {
+                console.log(this.receivedData);
+                this.emit('done', new Blob(this.receivedData, { type: this.fileType }), this.req.filename)
             }
 
-            this.received[data.id] = file
-            this.emit('progress', file, receivedBytes)
-        }
-
-        else if (data.type === 'file:end' && file.accepted) {
-            this.emit('progress', file, file.size)
-            this.emit('complete', file)
-        }
-
-        else if (data.type === 'file:cancel') {
-            file.cancelled = true
-            this.received[data.id] = file
-            this.emit('cancel', file)
-        }
-    }
-
-    accept(file: FileTransferInfo) {
-        this.received[file.id].accepted = true
-
-        setTimeout(() => {
-            this.connection.send({
-                type: 'file:accept'
-            })
         })
-
-        return this
-    }
-
-    reject(file: FileTransferInfo) {
-        this.received[file.id].accepted = false
-
-        setTimeout(() => {
-            this.connection.send({
-                type: 'file:reject'
-            })
-        })
-
-        return this
-    }
-
-    pause(file: FileTransferInfo) {
-        this.connection.send({
-            type: 'file:pause'
-        })
-
-        return this
-    }
-
-    resume(file: FileTransferInfo) {
-        this.connection.send({
-            type: 'file:resume'
-        })
-
-        return this
-    }
-
-    cancel(file: FileTransferInfo) {
-        file.cancelled = true
-        this.received[file.id] = file
-
-        this.connection.send({
-            type: 'file:cancel'
-        })
-
-        return this
     }
 
 }

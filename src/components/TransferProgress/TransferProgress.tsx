@@ -30,7 +30,7 @@ export default class TransferProgress extends React.Component<Props, State> {
 		});
 	}
 
-	private handleReceiveProgressUpdate(file: any, bytesReceived: number) {
+	private handleReceiveProgressUpdate(bytesReceived: number) {
 		this.setState({
 			bytesCompleted: bytesReceived
 		});

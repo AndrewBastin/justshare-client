@@ -5,8 +5,6 @@ export default interface FileSendRequest {
 
     /// Server Socket ID of the sender
     senderSocketID: string
-    /// P2P Peer ID of the sender
-    senderPeerID: string
 
     /// Server Socket ID of the intented reciever
     recieverSocketID: string
@@ -15,5 +13,4 @@ export default interface FileSendRequest {
     filename: string
     /// Size of the file (in bytes) to be sent
     filesizeBytes: number
-
 }

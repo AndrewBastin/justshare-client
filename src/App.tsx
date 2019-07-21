@@ -53,8 +53,8 @@ export default class App extends React.Component<{}, State> {
 
     setupPeerService() {
 
-        let url = "https://justshare-server.herokuapp.com";
-        // let url = "localhost:2299";
+        //let url = "https://justshare-server.herokuapp.com";
+        let url = "localhost:2299";
 
         this.peerService = PeerService.createInstance(url, this.state.nickname!!);
 
@@ -141,20 +141,10 @@ export default class App extends React.Component<{}, State> {
 
             this.peerService.on('fileSenderSession', (session) => {
 
-                session
-                    .on('accept', () => {
-                        console.log("accept");
-                    })
-                    .on('reject', () => {
-                        console.log("reject");
-                    })
-                    .on('complete', () => {
-                        console.log("complete");
-                    })
-                    .on('cancel', () => {
-                        console.log("cancel");
-                    })
-                    .start();
+                session.on('done', () => {
+                    console.log("complete");
+                })
+                session.start();
 
                 this.setState({
                     currentScreen: 'share-with',
@@ -191,26 +181,17 @@ export default class App extends React.Component<{}, State> {
 
         this.peerService.on('fileReceiverSession', (session) => {
 
-            session
-                .on('incoming', (file) => {
-                    console.log("incoming");
-                    session.accept(file)
-                })
-                .on('complete', (file) => {
-                    let blob = new Blob(file.data, { type: file.type });
-                    console.log(file);
-                    FileSaver.saveAs(blob, file.name);
+            session.on('done', (file, filename: string) => {
+                console.log(file);
+                FileSaver.saveAs(file, filename);
 
-                    console.log("complete");
-                })
-                .on('cancel', () => {
-                    console.log("cancel");
-                })
-                .start();
+                console.log("complete");
+            });
+            session.start();
 
-                this.setState({
-                    currentScreen: 'share-with'
-                })
+            this.setState({
+                currentScreen: 'share-with'
+            })
         });
 
         // TODO : Handle not case

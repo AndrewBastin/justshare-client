@@ -1,163 +1,85 @@
-import { guid } from '../Crypto';
-import { EventEmitter } from 'events';
-import { DataConnection } from 'peerjs';
-import FileTransferInfo from './FileTransferInfo';
-import through from 'through';
+import { EventEmitter } from "ee-ts";
+import SimplePeer from "simple-peer";
+import FileTransferInfo from "./FileTransferInfo";
+import { guid } from "../Crypto";
+import FileSendRequest from "../FileSendRequest";
+import through from "through";
 
-var read = require('filereader-stream')
+var read = require('filereader-stream');
 
+interface Events {
 
+    progress(bytesSent: number): void,
+    done(): void
 
-export default class PeerFileSend extends EventEmitter {
+}
 
-    id!: string
-    connection!: DataConnection
-    file!: File
-    chunkSize = Math.pow(2, 13)
-    totalChunks!: number
-    stream?: any
-    cancelled!: boolean
+export default class PeerFileSend extends EventEmitter<Events> {
 
-    constructor(connection: DataConnection, file: File) {
-        super()
+    private peer: SimplePeer.Instance;
+    private file: File;
+    private chunkSize = Math.pow(2, 13);
+    private totalChunks: number;
+    private req: FileSendRequest;
 
-        this.id = guid()
-        this.connection = connection
-        this.file = file
-        this.totalChunks = Math.ceil(this.file.size / this.chunkSize)
-        this.stream = null
-        this.cancelled = false
+    constructor(peer: SimplePeer.Instance, file: File, req: FileSendRequest) {
+        super();
 
-        this.handle = this.handle.bind(this)
+        this.peer = peer;
+        this.file = file;
+        this.totalChunks = Math.ceil(this.file.size / this.chunkSize);
+        this.req = req;
     }
-    
+
     start() {
-        this.connection.on('data', this.handle)
-    
-        this.connection.send({
+        // Start
+
+        let request: FileTransferInfo = {
+            id: this.req.shareID, // TODO : Remove unwanted data
             type: 'file:start',
-            id: this.id,
+            cancelled: false, // TODO : Remove unwanted data
             meta: {
-                name: this.file.name,
+                totalChunks: this.totalChunks,
                 type: this.file.type,
-                size: this.file.size,
                 chunkSize: this.chunkSize,
-                totalChunks: this.totalChunks
+
+                // TODO : Remove sending unwanted data
+                name: this.file.name,
+                size: this.file.size
             }
-        })
-    }
-
-    handle(data: FileTransferInfo) {
-        switch (data.type) {
-            case 'file:accept':
-                this.accept()
-                break;
-            case 'file:cancel':
-                this.cancel()
-                break;
-            case 'file:pause':
-                this.pause()
-                break;
-            case 'file:reject':
-                this.reject()
-                break;
-            case 'file:resume':
-                this.resume()
-                break;
-        }
-    }
-
-    pause(): PeerFileSend {
-        if (this.stream && !this.stream.paused) {
-            this.stream.pause()
-            this.emit('pause')
         }
 
-        return this
-    }
+        this.peer.send(JSON.stringify(request));
+        this.emit('progress', 0);
 
-    resume(): PeerFileSend {
-        if (this.stream && this.stream.paused) {
-            this.stream.resume()
-            this.emit('resume')
-        }
-
-        return this
-    }
-
-    accept(): PeerFileSend {
-        this.emit('accept')
-
-        this.stream = read(this.file, {
+        // Chunk sending
+        let stream = read(this.file, {
             chunkSize: this.chunkSize
-        })
+        });
 
-        let chunksSent = 0
-        this.stream.pipe(through(
+        let chunksSent = 0;
+        stream.pipe(through(
             (chunk: any) => {
-                this.connection.send({
+                this.peer.send(JSON.stringify({
                     type: 'file:chunk',
-                    id: this.id,
+                    id: this.req.shareID,
                     chunk: chunk
-                })
+                } as FileTransferInfo))
 
-                chunksSent++
-                this.emit('progress', Math.min(this.file.size, chunksSent * this.chunkSize))
+                chunksSent++;
+                this.emit('progress', Math.min(this.file.size, chunksSent * this.chunkSize));
             },
-
             () => {
-                // Stop listening to receiver.
-                this.connection.off('data', this.handle)
-
-                if (this.cancelled) {
-                    return
-                }
-
-                // Tell receiver that this is the end.
-                this.connection.send({
+                // TODO : disconnect from peer
+                this.peer.send(JSON.stringify({
                     type: 'file:end',
-                    id: this.id
-                })
+                    id: this.req.shareID
+                } as FileTransferInfo));
 
-                this.emit('progress', this.file.size)
-                this.emit('complete')
+                this.emit('progress', this.file.size);
+                this.emit('done');
             }
         ))
-
-        // An error is thrown if the transfer is cancelled,
-        // so we can probably just noop this.
-        this.stream.on('error', function () { })
-
-        return this
     }
 
-    reject() {
-        // In the event that an accepted transfer
-        // is later rejected, kill the stream.
-        this.stream ?
-            this.cancel() :
-            this.emit('reject')
-
-        return this
-    }
-
-    cancel() {
-        this.cancelled = true
-
-        setTimeout(() => {
-            if (this.stream) {
-                this.stream.abort()
-                this.stream = null
-            }
-
-            this.connection.send({
-                type: 'file:cancel',
-                id: this.id
-            })
-
-            this.emit('cancel')
-        })
-
-        return this
-    }
 }
