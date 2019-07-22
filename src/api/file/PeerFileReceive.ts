@@ -1,7 +1,8 @@
 import { EventEmitter } from "ee-ts";
 import SimplePeer from "simple-peer";
 import FileSendRequest from "../FileSendRequest";
-import FileTransferInfo from "./FileTransferInfo";
+import PeerFileSend from "./PeerFileSend";
+import FileStartMetadata from "./FileStartMetadata";
 
 interface Events {
 
@@ -32,25 +33,26 @@ export default class PeerFileReceive extends EventEmitter<Events> {
     }
 
     start() {
-        this.peer.on('data', (receivedDataString: string) => {
-            let data = JSON.parse(receivedDataString) as FileTransferInfo;
+        this.peer.on('data', (data: Uint8Array) => {
             
-            
-            if (data.type === 'file:start') {
+            if (data[0] === PeerFileSend.HEADER_FILE_START) {
+
+                let meta = JSON.parse(new TextDecoder().decode(data.slice(1))) as FileStartMetadata;
+
                 console.log(data);
-                this.chunkCount = data.meta.totalChunks;
+                this.chunkCount = meta.totalChunks;
                 this.receivedChunkCount = 0;
-                this.chunkSizeBytes = data.meta.chunkSize;
-                this.fileType = data.meta.fileType;
+                this.chunkSizeBytes = meta.chunkSize;
+                this.fileType = meta.fileType;
 
                 this.emit('progress', 0);
-            } else if (data.type === 'file:chunk') {
-                this.receivedData.push(Uint8Array.from(data.chunk.data));
+            } else if (data[0] === PeerFileSend.HEADER_FILE_CHUNK) {
+                this.receivedData.push(data.slice(1));
 
                 this.receivedChunkCount++;
 
                 this.emit('progress', Math.min(this.chunkSizeBytes * this.receivedChunkCount, this.req.filesizeBytes));
-            } else if (data.type === 'file:end') {
+            } else if (data[0] === PeerFileSend.HEADER_FILE_END) {
                 console.log(this.receivedData);
                 this.emit('done', new Blob(this.receivedData, { type: this.fileType }), this.req.filename)
             }
