@@ -41,7 +41,7 @@ export default class PeerFileReceive extends EventEmitter<Events> {
                 this.chunkCount = data.meta.totalChunks;
                 this.receivedChunkCount = 0;
                 this.chunkSizeBytes = data.meta.chunkSize;
-                this.fileType = data.meta.type;
+                this.fileType = data.meta.fileType;
 
                 this.emit('progress', 0);
             } else if (data.type === 'file:chunk') {

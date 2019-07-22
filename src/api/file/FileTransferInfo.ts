@@ -1,15 +1,10 @@
 export default interface FileTransferInfo {
-    type: 'file:start' | 'file:accept' | 'file:reject' | 'file:pause' | 'file:resume' | 'file:cancel' | 'file:chunk' | 'file:end',
-    id: string,
-    
-    cancelled: boolean,
+    type: 'file:start' | 'file:chunk' | 'file:end',
 
     chunk?: any,
 
     meta: {
-        name: string,
-        type: string,
-        size: number,
+        fileType: string,
         chunkSize: number,
         totalChunks: number
     }

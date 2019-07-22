@@ -35,17 +35,11 @@ export default class PeerFileSend extends EventEmitter<Events> {
         // Start
 
         let request: FileTransferInfo = {
-            id: this.req.shareID, // TODO : Remove unwanted data
             type: 'file:start',
-            cancelled: false, // TODO : Remove unwanted data
             meta: {
                 totalChunks: this.totalChunks,
-                type: this.file.type,
-                chunkSize: this.chunkSize,
-
-                // TODO : Remove sending unwanted data
-                name: this.file.name,
-                size: this.file.size
+                fileType: this.file.type,
+                chunkSize: this.chunkSize
             }
         }
 
@@ -62,7 +56,6 @@ export default class PeerFileSend extends EventEmitter<Events> {
             (chunk: any) => {
                 this.peer.send(JSON.stringify({
                     type: 'file:chunk',
-                    id: this.req.shareID,
                     chunk: chunk
                 } as FileTransferInfo))
 
@@ -72,8 +65,7 @@ export default class PeerFileSend extends EventEmitter<Events> {
             () => {
                 // TODO : disconnect from peer
                 this.peer.send(JSON.stringify({
-                    type: 'file:end',
-                    id: this.req.shareID
+                    type: 'file:end'
                 } as FileTransferInfo));
 
                 this.emit('progress', this.file.size);
