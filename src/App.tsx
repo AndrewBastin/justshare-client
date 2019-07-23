@@ -20,6 +20,9 @@ interface State {
     fileRequest?: FileSendRequest | null, 
     fileRequestAcceptCallback?: (accept: boolean) => void,
 
+    // Disable accept button because it is already been clicked (waiting for handshakes to complete)
+    lockAccept: boolean,
+
     fileToSend?: File,
 
     waitingForAccept: boolean,
@@ -40,6 +43,7 @@ export default class App extends React.Component<{}, State> {
             peers: [],
             socketID: '',
             waitingForAccept: false,
+            lockAccept: false,
             nickname: window.localStorage.getItem("nickname"),
             currentScreen: window.localStorage.getItem("nickname") ? 'share-with' : 'nickname',
         };
@@ -171,13 +175,17 @@ export default class App extends React.Component<{}, State> {
                     Accept ?
                     <br />
                     <br />
-                    <button onClick={() => this.handleRecieveAccept() }>Accept</button>
+                    <button disabled={this.state.lockAccept} onClick={() => this.handleRecieveAccept() }>Accept</button>
                 </p>
             </div>
         )
     }
 
     handleRecieveAccept() {
+
+        this.setState({
+            lockAccept: true
+        });
 
         this.peerService.on('fileReceiverSession', (session) => {
 
@@ -190,8 +198,9 @@ export default class App extends React.Component<{}, State> {
             session.start();
 
             this.setState({
-                currentScreen: 'share-with'
-            })
+                currentScreen: 'share-with',
+                lockAccept: false
+            });
         });
 
         // TODO : Handle not case
