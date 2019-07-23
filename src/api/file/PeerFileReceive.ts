@@ -30,34 +30,40 @@ export default class PeerFileReceive extends EventEmitter<Events> {
         this.req = req;
 
         this.receivedData = [];
+
+        this.handleData = this.handleData.bind(this);
+    }
+
+    private handleData(data: Uint8Array) {
+        if (data[0] === PeerFileSend.HEADER_FILE_START) {
+
+            let meta = JSON.parse(new TextDecoder().decode(data.slice(1))) as FileStartMetadata;
+
+            console.log(data);
+            this.chunkCount = meta.totalChunks;
+            this.receivedChunkCount = 0;
+            this.chunkSizeBytes = meta.chunkSize;
+            this.fileType = meta.fileType;
+
+            this.emit('progress', 0);
+        } else if (data[0] === PeerFileSend.HEADER_FILE_CHUNK) {
+            this.receivedData.push(data.slice(1));
+
+            this.receivedChunkCount++;
+
+            this.emit('progress', Math.min(this.chunkSizeBytes * this.receivedChunkCount, this.req.filesizeBytes));
+        } else if (data[0] === PeerFileSend.HEADER_FILE_END) {
+            console.log(this.receivedData);
+            this.emit('done', new Blob(this.receivedData, { type: this.fileType }), this.req.filename)
+
+            // Disconnect from the peer and cleanup
+            this.peer.off('data', this.handleData);
+            this.peer.destroy();
+        }
     }
 
     start() {
-        this.peer.on('data', (data: Uint8Array) => {
-            
-            if (data[0] === PeerFileSend.HEADER_FILE_START) {
-
-                let meta = JSON.parse(new TextDecoder().decode(data.slice(1))) as FileStartMetadata;
-
-                console.log(data);
-                this.chunkCount = meta.totalChunks;
-                this.receivedChunkCount = 0;
-                this.chunkSizeBytes = meta.chunkSize;
-                this.fileType = meta.fileType;
-
-                this.emit('progress', 0);
-            } else if (data[0] === PeerFileSend.HEADER_FILE_CHUNK) {
-                this.receivedData.push(data.slice(1));
-
-                this.receivedChunkCount++;
-
-                this.emit('progress', Math.min(this.chunkSizeBytes * this.receivedChunkCount, this.req.filesizeBytes));
-            } else if (data[0] === PeerFileSend.HEADER_FILE_END) {
-                console.log(this.receivedData);
-                this.emit('done', new Blob(this.receivedData, { type: this.fileType }), this.req.filename)
-            }
-
-        })
+        this.peer.on('data', this.handleData);
     }
 
 }

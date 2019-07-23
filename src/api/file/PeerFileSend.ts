@@ -108,11 +108,13 @@ export default class PeerFileSend extends EventEmitter<Events> {
                 this.emit('progress', Math.min(this.file.size, chunksSent * this.chunkSize));
             },
             () => {
-                // TODO : disconnect from peer
                 this.peer.send(this.prepareFileEndData());
 
                 this.emit('progress', this.file.size);
                 this.emit('done');
+
+                // Destroy peer
+                this.peer.destroy();
             }
         ))
     }
