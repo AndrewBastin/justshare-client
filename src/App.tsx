@@ -244,12 +244,21 @@ export default class App extends React.Component<{}, State> {
             );
         }
     }
+
+    handleDeleteNicknameClick() {
+        window.localStorage.removeItem("nickname");
+        window.location.reload(true);
+    }
     
     public render(): JSX.Element {
         return (
             <div className="App">
                 <h3 style={{ textAlign: 'center' }}>JustShare [Alpha 13]</h3>
-                <p style={{ textAlign: 'center' }}>You are : {this.state.nickname ? `${this.state.nickname} (id : ${this.state.socketID})` : this.state.socketID}</p>
+                <p style={{ textAlign: 'center' }}>
+                    You are : {this.state.nickname ? `${this.state.nickname} (id : ${this.state.socketID})` : this.state.socketID}
+                    <br />
+                    <a href="#" onClick={() => this.handleDeleteNicknameClick()}>{window.localStorage.getItem("nickname") && this.state.currentScreen === 'share-with' ? "Delete Nickname" : ""}</a>
+                </p>
                 { this.renderCurrentPage() }
             </div>
         )
