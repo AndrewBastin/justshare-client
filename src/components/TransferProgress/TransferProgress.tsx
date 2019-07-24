@@ -22,6 +22,7 @@ export default class TransferProgress extends React.Component<Props, State> {
 
 		this.handleSendProgressUpdate = this.handleSendProgressUpdate.bind(this);
 		this.handleReceiveProgressUpdate = this.handleReceiveProgressUpdate.bind(this);
+		this.handleCancelButtonClick = this.handleCancelButtonClick.bind(this);
 	}
 
 	private handleSendProgressUpdate(bytesSent: number) {
@@ -56,12 +57,18 @@ export default class TransferProgress extends React.Component<Props, State> {
 
 	}
 
+	private handleCancelButtonClick() {
+		this.props.job.session.cancel();
+	}
+
 	public render(): JSX.Element {
 		return (
 			<div>
 				File: {this.props.job.request.filename} <br />
 				Done: {fileSizeSI(this.state.bytesCompleted)} ({Math.floor((this.state.bytesCompleted / this.props.job.request.filesizeBytes) * 100)} %)<br />
 				Total: {fileSizeSI(this.props.job.request.filesizeBytes)} <br />
+				
+				<button onClick={this.handleCancelButtonClick}>Cancel</button> <br />
 			</div>
 		)
 	}
