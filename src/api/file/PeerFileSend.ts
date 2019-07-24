@@ -4,6 +4,7 @@ import { guid } from "../Crypto";
 import FileSendRequest from "../FileSendRequest";
 import through from "through";
 import FileStartMetadata from "./FileStartMetadata";
+import PeerFileReceive from "./PeerFileReceive";
 
 var read = require('filereader-stream');
 
@@ -11,7 +12,11 @@ interface Events {
 
     progress(bytesSent: number): void,
     done(): void
+    // Called when the sender (this) has requested a cancel
+    cancel(): void
 
+    // Called when the receiver has requested a cancel
+    cancelled(): void
 }
 
 export default class PeerFileSend extends EventEmitter<Events> {
@@ -21,7 +26,7 @@ export default class PeerFileSend extends EventEmitter<Events> {
     static HEADER_FILE_CHUNK = 1;
     static HEADER_FILE_END = 2;
 
-
+    static HEADER_SEND_CANCEL = 10;
 
 
     private peer: SimplePeer.Instance;
@@ -29,6 +34,7 @@ export default class PeerFileSend extends EventEmitter<Events> {
     private chunkSize = Math.pow(2, 13);
     private totalChunks: number;
     private req: FileSendRequest;
+    private cancelled: boolean = false;
 
     constructor(peer: SimplePeer.Instance, file: File, req: FileSendRequest) {
         super();
@@ -87,7 +93,29 @@ export default class PeerFileSend extends EventEmitter<Events> {
         return resp;
     }
 
+    // Structure for delete data
+    // 1st byte -> Data type header (HEADER_SEND_CANCEL)
+    private prepareCancelData(): Uint8Array {
+        let resp = new Uint8Array(1);
+
+        resp[0] = PeerFileSend.HEADER_SEND_CANCEL;
+
+        return resp;
+    }
+
     start() {
+        // Listen for cancel requests
+        this.peer.on('data', (data: Uint8Array) => {
+
+            if (data[0] === PeerFileReceive.HEADER_REC_CANCEL) {
+                this.cancelled = true;
+                this.peer.destroy();
+                
+                this.emit('cancelled');
+            }
+
+        });
+
         // Start
         let startHeader = this.prepareFileStartData();
 
@@ -102,10 +130,14 @@ export default class PeerFileSend extends EventEmitter<Events> {
         let chunksSent = 0;
         stream.pipe(through(
             (chunk: any) => {
-                this.peer.send(this.prepareChunkData(chunk))
+                // TODO : Some way to actually stop this function on cancel
+                if (!this.cancelled) {
+                    this.peer.send(this.prepareChunkData(chunk))
+    
+                    chunksSent++;
+                    this.emit('progress', Math.min(this.file.size, chunksSent * this.chunkSize));
+                }
 
-                chunksSent++;
-                this.emit('progress', Math.min(this.file.size, chunksSent * this.chunkSize));
             },
             () => {
                 this.peer.send(this.prepareFileEndData());
@@ -117,6 +149,12 @@ export default class PeerFileSend extends EventEmitter<Events> {
                 this.peer.destroy();
             }
         ))
+    }
+
+    cancel() {
+        this.cancelled = true;
+        this.peer.send(this.prepareCancelData());
+        this.emit('cancel');
     }
 
 }

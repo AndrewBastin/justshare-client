@@ -111,6 +111,18 @@ export default class PeerService extends EventEmitter<Events> {
 						this.jobs.delete(req.shareID);
 						this.emit('jobsUpdate', Array.from(this.jobs.values()));
 					});
+
+					// Register callback to delete job on cancellation
+					receive.on('cancel', () => {
+						this.jobs.delete(req.shareID);
+						this.emit('jobsUpdate', Array.from(this.jobs.values()));
+					});
+
+					receive.on('cancelled', () => {
+						this.jobs.delete(req.shareID);
+						this.emit('jobsUpdate', Array.from(this.jobs.values()));
+					});
+
 					
 					// NOTE : Don't forget to call the start function to start the transfer!
 					this.emit("fileReceiverSession", receive);
@@ -195,6 +207,16 @@ export default class PeerService extends EventEmitter<Events> {
 					
 					// Registering an on complete callback to remove the job once complete
 					send.on('done', () => {
+						this.jobs.delete(request.shareID);
+						this.emit('jobsUpdate', Array.from(this.jobs.values()));
+					});
+
+					// Registering for deletion on cancellation
+					send.on('cancel', () => {
+						this.jobs.delete(request.shareID);
+						this.emit('jobsUpdate', Array.from(this.jobs.values()));
+					});
+					send.on('cancelled', () => {
 						this.jobs.delete(request.shareID);
 						this.emit('jobsUpdate', Array.from(this.jobs.values()));
 					});

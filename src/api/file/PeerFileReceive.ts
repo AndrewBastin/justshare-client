@@ -8,10 +8,19 @@ interface Events {
 
     progress(bytesCompleted: number): void,
     done(receivedFile: Blob, filename: string): void
+    
+    // Called when the receiver (this) calls cancel
+    cancel(): void
 
+    // Called when the sender cancels the transfer
+    cancelled(): void
 }
 
 export default class PeerFileReceive extends EventEmitter<Events> {
+
+    // Special data headers sent by Receivers
+    static HEADER_REC_CANCEL = 20;
+
 
     private peer: SimplePeer.Instance;
     private req: FileSendRequest;
@@ -59,11 +68,33 @@ export default class PeerFileReceive extends EventEmitter<Events> {
             // Disconnect from the peer and cleanup
             this.peer.off('data', this.handleData);
             this.peer.destroy();
+        } else if (data[0] === PeerFileSend.HEADER_SEND_CANCEL) {
+            this.peer.off('data', this.handleData);
+            this.peer.destroy();
+            
+            this.emit('cancelled');
         }
     }
 
     start() {
         this.peer.on('data', this.handleData);
+    }
+
+    // Structure for cancel data
+    // 1st byte -> Header for the sent data type (HEADER_REC_CANCEL)
+    private prepareCancelData(): Uint8Array {
+        let resp = new Uint8Array(1);
+
+        resp[0] = PeerFileReceive.HEADER_REC_CANCEL;
+        return resp;
+    }
+    
+    cancel() {
+        this.peer.send(this.prepareCancelData());
+        this.peer.off('data', this.handleData);
+        this.peer.destroy();
+
+        this.emit('cancel');
     }
 
 }
