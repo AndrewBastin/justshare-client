@@ -39,6 +39,9 @@ export default class TransfersSection extends React.Component<{}, State> {
 		return (
 			<div>
 				{
+					(this.state.jobs.length > 0) ? (<div className="App-ListHeading">Transfers</div>) : (<div></div>)
+				}
+				{
 					this.state.jobs.map((job, index) => (
 						<TransferProgress key={index} job={job} />
 					))
