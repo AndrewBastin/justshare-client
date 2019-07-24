@@ -253,7 +253,7 @@ export default class App extends React.Component<{}, State> {
     public render(): JSX.Element {
         return (
             <div className="App">
-                <h3 style={{ textAlign: 'center' }}>JustShare [Alpha 15]</h3>
+                <h3 style={{ textAlign: 'center' }}>JustShare [Alpha 16]</h3>
                 <p style={{ textAlign: 'center' }}>
                     {
                         window.localStorage.getItem("nickname") ?
