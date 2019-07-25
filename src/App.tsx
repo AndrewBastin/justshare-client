@@ -71,7 +71,16 @@ export default class App extends React.Component<{}, State> {
         });
 
         this.peerService.on("peerUpdate", (peers) => {
-            this.setState({ peers: peers })
+            this.setState({ peers: peers });
+
+            // Return back to share-with incase the sender just disconnects before accept
+            if (this.state.currentScreen === 'recieve') {
+                if (!peers.find((peer) => peer.peerID === this.state.fileRequest!!.shareID)) {
+                    this.setState({
+                        currentScreen: 'share-with'
+                    });
+                }
+            }
         });
 
         this.peerService.on("fileSendRequest", (req) => new Promise((resolve, reject) => {
