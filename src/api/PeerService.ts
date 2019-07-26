@@ -146,6 +146,8 @@ export default class PeerService extends EventEmitter<Events> {
 						
 						// Tunnels a message saying the sender has accepted the requested, and receiver can start sending signalling data
 						this.socket.emit(`accept ${req.shareID}`);
+					} else {
+						this.socket.emit(`deny ${req.shareID}`);
 					}
 				})
 			});
@@ -169,10 +171,11 @@ export default class PeerService extends EventEmitter<Events> {
 		return this.nickname;
 	}
 	
-	sendFileSendRequest(recipientID: string, file: File): Promise<FileSendRequest> {
+	// Returns a promise that returns the corresponding FileSendRequest and whether the request was accepted
+	sendFileSendRequest(recipientID: string, file: File): Promise<[FileSendRequest, boolean]> {
 		
 		return new Promise((resolve, reject) => {
-			
+
 			let request: FileSendRequest = {
 				shareID: guid(),
 				senderSocketID: this.socket.id,
@@ -180,37 +183,37 @@ export default class PeerService extends EventEmitter<Events> {
 				filename: file.name,
 				filesizeBytes: file.size
 			}
-			
+	
 			// Callback for a tunnelled message from the sender saying it accepts the send request
 			this.socket.on(`accept ${request.shareID}`, () => {
-				
+	
 				let peer = new Peer({ initiator: true });
-				
-				
+
+	
 				peer.on('signal', (signallingData: Peer.SignalData) => {
 					this.socket.emit(`signal ${request.shareID}`, JSON.stringify(signallingData));
-					
+	
 				});
-				
+	
 				this.socket.on(`signal ${request.shareID}`, (signallingData: string) => {
 					console.log(JSON.parse(signallingData));
 					peer.signal(JSON.parse(signallingData));
 				});
-				
+	
 				peer.on('connect', () => {
 					console.log('connect'); // TODO : Remove
-
+	
 					// Stop listening for signal data
 					this.socket.off(`signal ${request.shareID}`);
-
+	
 					let send = new PeerFileSend(peer, file, request);
-					
+	
 					// Registering an on complete callback to remove the job once complete
 					send.on('done', () => {
 						this.jobs.delete(request.shareID);
 						this.emit('jobsUpdate', Array.from(this.jobs.values()));
 					});
-
+	
 					// Registering for deletion on cancellation
 					send.on('cancel', () => {
 						this.jobs.delete(request.shareID);
@@ -220,22 +223,25 @@ export default class PeerService extends EventEmitter<Events> {
 						this.jobs.delete(request.shareID);
 						this.emit('jobsUpdate', Array.from(this.jobs.values()));
 					});
-
-
+	
+	
 					this.jobs.set(request.shareID, { request: request, session: send });
-					
+	
 					// NOTE : Don't forget to call the start function to start the transfer!
 					this.emit('fileSenderSession', send);
-					
+	
 					this.emit('jobsUpdate', Array.from(this.jobs.values()));
 				});
+
+				resolve([request, true]);
 			});
-			
+
+			this.socket.on(`deny ${request.shareID}`, () => {
+				resolve([request, false]);
+			});
+	
 			this.socket.emit('req file share', request);
-			resolve(request);
-			
 		});
-		
 	}
 	
 }

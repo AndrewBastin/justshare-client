@@ -57,8 +57,8 @@ export default class App extends React.Component<{}, State> {
 
     setupPeerService() {
 
-        let url = "https://justshare-server.herokuapp.com";
-        //let url = "localhost:2299";
+        //let url = "https://justshare-server.herokuapp.com";
+        let url = "localhost:2299";
 
         this.peerService = PeerService.createInstance(url, this.state.nickname!!);
 
@@ -150,21 +150,33 @@ export default class App extends React.Component<{}, State> {
         });
 
         if (this.state.selectedPeerID) {
-            await this.peerService.sendFileSendRequest(this.state.selectedPeerID, file);
+            this.peerService.sendFileSendRequest(this.state.selectedPeerID, file)
+                .then(([req, accepted] : [FileSendRequest, boolean]) => {
 
-            this.peerService.on('fileSenderSession', (session) => {
+                    if (accepted) {
+                        this.peerService.on('fileSenderSession', (session) => {
+            
+                            session.on('done', () => {
+                                console.log("complete");
+                            })
+                            session.start();
+            
+                            this.setState({
+                                currentScreen: 'share-with',
+                                waitingForAccept: false,
+                                fileRequest: null
+                            });
+                        })
+                    } else {
+                        this.setState({
+                            currentScreen: 'share-with',
+                            waitingForAccept: false,
+                            fileRequest: null
+                        });
+                    }
 
-                session.on('done', () => {
-                    console.log("complete");
                 })
-                session.start();
 
-                this.setState({
-                    currentScreen: 'share-with',
-                    waitingForAccept: false,
-                    fileRequest: null
-                });
-            })
 
         } else {
             // TODO : Handle this
@@ -184,36 +196,47 @@ export default class App extends React.Component<{}, State> {
                     Accept ?
                     <br />
                     <br />
-                    <button disabled={this.state.lockAccept} onClick={() => this.handleRecieveAccept() }>Accept</button>
+                    <button disabled={this.state.lockAccept} onClick={() => this.handleRecieveAccept(true) }>Accept</button>
+                    <button disabled={this.state.lockAccept} onClick={() => this.handleRecieveAccept(false) }>Deny</button>
                 </p>
             </div>
         )
     }
 
-    handleRecieveAccept() {
+    handleRecieveAccept(accept: boolean) {
 
         this.setState({
             lockAccept: true
         });
-
-        this.peerService.on('fileReceiverSession', (session) => {
-
-            session.on('done', (file, filename: string) => {
-                console.log(file);
-                FileSaver.saveAs(file, filename);
-
-                console.log("complete");
+        
+        if (accept) {
+            this.peerService.on('fileReceiverSession', (session) => {
+    
+                session.on('done', (file, filename: string) => {
+                    console.log(file);
+                    FileSaver.saveAs(file, filename);
+    
+                    console.log("complete");
+                });
+                session.start();
+    
+                this.setState({
+                    currentScreen: 'share-with',
+                    lockAccept: false
+                });
             });
-            session.start();
+    
+            // TODO : Handle not case
+            if (this.state.fileRequestAcceptCallback) this.state.fileRequestAcceptCallback(true);
+        } else {
 
             this.setState({
                 currentScreen: 'share-with',
                 lockAccept: false
             });
-        });
 
-        // TODO : Handle not case
-        if (this.state.fileRequestAcceptCallback) this.state.fileRequestAcceptCallback(true);
+            if (this.state.fileRequestAcceptCallback) this.state.fileRequestAcceptCallback(false);
+        }
 
     }
 
