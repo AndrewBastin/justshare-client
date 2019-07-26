@@ -57,8 +57,8 @@ export default class App extends React.Component<{}, State> {
 
     setupPeerService() {
 
-        //let url = "https://justshare-server.herokuapp.com";
-        let url = "localhost:2299";
+        let url = "https://justshare-server.herokuapp.com";
+        //let url = "localhost:2299";
 
         this.peerService = PeerService.createInstance(url, this.state.nickname!!);
 
@@ -285,7 +285,7 @@ export default class App extends React.Component<{}, State> {
     public render(): JSX.Element {
         return (
             <div className="App">
-                <h3 style={{ textAlign: 'center' }}>JustShare [Alpha 17]</h3>
+                <h3 style={{ textAlign: 'center' }}>JustShare [Alpha 18]</h3>
                 <p style={{ textAlign: 'center' }}>
                     {
                         window.localStorage.getItem("nickname") ?
