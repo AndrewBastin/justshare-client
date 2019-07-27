@@ -5,8 +5,7 @@ import { fileSizeSI } from './api/Size';
 import FileSaver from 'file-saver';
 import PeerInfo from './api/PeerInfo';
 import PeerService from './api/PeerService';
-import TransferProgress from './components/TransferProgress/TransferProgress';
-import JobInfo from './api/JobInfo';
+import Peer from 'simple-peer';
 import TransfersList from './components/TransfersList/TransfersList';
 
 interface State {
@@ -260,6 +259,20 @@ export default class App extends React.Component<{}, State> {
     }
 
     renderCurrentPage(): JSX.Element {
+
+        // Override: Browser does not support WebRTC
+        if (!Peer.WEBRTC_SUPPORT) {
+            return (
+                <div>
+                    <div className="App-ListHeading">Unsupported</div>
+                    <div>
+                        Your browser does not seem to support the technologies required for this
+                        program to work, please upgrade to a modern browser with WebRTC support.
+                    </div>
+                </div>
+            )
+        }
+
         if (this.state.currentScreen === 'nickname') {
             return this.renderNicknamePage();
         } else if (this.state.currentScreen === 'share-with') {
