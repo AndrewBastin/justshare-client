@@ -11,6 +11,7 @@
     "events": "^3.0.0",
     "file-saver": "^2.0.2",
     "filereader-stream": "^2.0.0",
+    "framer-motion": "^2.0.0-beta.72",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
     "react-scripts": "3.0.1",
