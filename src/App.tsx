@@ -7,6 +7,7 @@ import PeerInfo from './api/PeerInfo';
 import PeerService from './api/PeerService';
 import Peer from 'simple-peer';
 import TransfersList from './components/TransfersList/TransfersList';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface State {
     
@@ -107,15 +108,33 @@ export default class App extends React.Component<{}, State> {
                 <TransfersList />
                 <div className="App-ListHeading">Share With</div>
                 <div>
-                    {
-                        this.state.peers.map((peer, index) => {
-                            return (
-                                <a className="App-ListItem" key={index} onClick={() => this.onShareWithPeerClick(peer.peerID)}>{
-                                    (peer.nickname) ? peer.nickname : peer.peerID
-                                }</a>
-                            );
-                        })
-                    }
+                    <AnimatePresence>
+                        {
+                            this.state.peers.map((peer, index) => {
+                                return (
+                                    <motion.a 
+                                        initial={{
+                                            opacity: 0,
+                                            scale: 0
+                                        }}
+                                        animate={{
+                                            opacity: 1,
+                                            scale: 1 
+                                        }}
+                                        exit={{
+                                            opacity: 0,
+                                            scale: 0
+                                        }}
+                                        className="App-ListItem" 
+                                        key={index} 
+                                        onClick={() => this.onShareWithPeerClick(peer.peerID)}
+                                    >
+                                        { (peer.nickname) ? peer.nickname : peer.peerID }
+                                    </motion.a>
+                                );
+                            })
+                        }
+                    </AnimatePresence>
                 </div>
             </div>
         );
