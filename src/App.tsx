@@ -1,13 +1,16 @@
 import React from 'react';
 import './App.css';
 import FileSendRequest from './api/FileSendRequest';
-import { fileSizeSI } from './api/Size';
 import FileSaver from 'file-saver';
 import PeerInfo from './api/PeerInfo';
 import PeerService from './api/PeerService';
 import Peer from 'simple-peer';
-import TransfersList from './components/TransfersList/TransfersList';
-import { AnimatePresence, motion } from 'framer-motion';
+
+import ShareWithPage from "./pages/ShareWithPage";
+import SelectFilePage from "./pages/SelectFilePage";
+import ReceiveFilePage from "./pages/ReceiveFilePage";
+import NicknamePage from "./pages/NicknamePage";
+import UnsupportedPage from "./pages/UnsupportedPage";
 
 interface State {
     
@@ -47,6 +50,10 @@ export default class App extends React.Component<{}, State> {
             nickname: window.localStorage.getItem("nickname"),
             currentScreen: window.localStorage.getItem("nickname") ? 'share-with' : 'nickname',
         };
+
+        this.onShareWithPeerClick = this.onShareWithPeerClick.bind(this);
+        this.handleFileSelected = this.handleFileSelected.bind(this);
+        this.handleRecieveAccept = this.handleRecieveAccept.bind(this);
     }
 
     componentWillMount() {
@@ -104,58 +111,20 @@ export default class App extends React.Component<{}, State> {
 
     renderShareWith(): JSX.Element {
         return (
-            <div>
-                <TransfersList />
-                <div className="App-ListHeading">Share With</div>
-                <div>
-                    <AnimatePresence>
-                        {
-                            this.state.peers.map((peer, index) => {
-                                return (
-                                    <motion.a 
-                                        initial={{
-                                            opacity: 0,
-                                            scale: 0
-                                        }}
-                                        animate={{
-                                            opacity: 1,
-                                            scale: 1 
-                                        }}
-                                        exit={{
-                                            opacity: 0,
-                                            scale: 0
-                                        }}
-                                        className="App-ListItem" 
-                                        key={index} 
-                                        onClick={() => this.onShareWithPeerClick(peer.peerID)}
-                                    >
-                                        { (peer.nickname) ? peer.nickname : peer.peerID }
-                                    </motion.a>
-                                );
-                            })
-                        }
-                    </AnimatePresence>
-                </div>
-            </div>
+            <ShareWithPage 
+                peers={this.state.peers}
+                onPeerSelect={this.onShareWithPeerClick}
+            />
         );
     }
 
     renderSelectFile(): JSX.Element {
-        if (!this.state.waitingForAccept) {
-            return (
-                <div>
-                    <div className="App-ListHeading">Select File</div>
-                    <input type="file" onChange={ (ev) => this.handleFileSelected(ev) }></input>
-                </div>
-            );
-        } else {
-            return (
-                <div>
-                    <div className="App-ListHeading">Select File</div>
-                    <div>Waiting for the reciever to accept...</div>
-                </div>
-            );
-        }
+        return (
+            <SelectFilePage
+                waitingForAccept={this.state.waitingForAccept}
+                onFileSelect={this.handleFileSelected}
+            />
+        );
     }
 
     async handleFileSelected(ev: React.ChangeEvent<HTMLInputElement>) {
@@ -202,23 +171,14 @@ export default class App extends React.Component<{}, State> {
     }
 
     renderRecieveFile(): JSX.Element {
-        let senderInfo = this.state.peers.find(p => p.peerID === this.state.fileRequest!!.senderSocketID)
         return (
-            <div>
-                <div className="App-ListHeading">Recieve</div>
-                <p>
-                    { senderInfo ? senderInfo.nickname : this.state.fileRequest!!.senderSocketID } wants to send 
-                    &nbsp;{this.state.fileRequest!!.filename} ({fileSizeSI(this.state.fileRequest!!.filesizeBytes)}) <br />
-                    <br />
-                    <br />
-                    Accept ?
-                    <br />
-                    <br />
-                    <button disabled={this.state.lockAccept} onClick={() => this.handleRecieveAccept(true) }>Accept</button>
-                    <button disabled={this.state.lockAccept} onClick={() => this.handleRecieveAccept(false) }>Deny</button>
-                </p>
-            </div>
-        )
+            <ReceiveFilePage
+                peers={this.state.peers}
+                lockAccept={this.state.lockAccept}
+                fileRequest={this.state.fileRequest!!}
+                onReceiveDecision={this.handleRecieveAccept}
+            />
+        );
     }
 
     handleRecieveAccept(accept: boolean) {
@@ -261,34 +221,21 @@ export default class App extends React.Component<{}, State> {
     renderNicknamePage(): JSX.Element {
         // TODO : Nickname validation
         return (
-            <div>
-                <div className="App-ListHeading">Nickname</div>
-                <div>Enter the nickname (you will be shown on other devices with this name) : </div>
-                <input value={ this.state.nickname ? this.state.nickname : "" } onChange={(ev) => this.setState({ nickname: ev.target.value }) }/>
-                
-                <button onClick={(ev) => {
+            <NicknamePage
+                handleNicknameSelect={(nickname) => {
                     this.setupPeerService();
-                    window.localStorage.setItem("nickname", this.state.nickname as string);
-                    this.setState({ currentScreen: 'share-with' });
-                }}>
-                    Done
-                </button>
-            </div>
-        )
+                    window.localStorage.setItem("nickname", nickname as string);
+                    this.setState({ nickname: nickname, currentScreen: 'share-with' });
+                }}
+            />
+        );
     }
 
     renderCurrentPage(): JSX.Element {
-
         // Override: Browser does not support WebRTC
         if (!Peer.WEBRTC_SUPPORT) {
             return (
-                <div>
-                    <div className="App-ListHeading">Unsupported</div>
-                    <div>
-                        Your browser does not seem to support the technologies required for this
-                        program to work, please upgrade to a modern browser with WebRTC support.
-                    </div>
-                </div>
+                <UnsupportedPage />
             )
         }
 
