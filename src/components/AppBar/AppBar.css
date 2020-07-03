@@ -1,0 +1,33 @@
+.AppBar {
+  background-color: rgb(20, 20, 20);
+  margin-bottom: 1.5em;
+  padding-top: 1em;
+  padding-bottom: 1em;
+  padding-left: 0.5em;
+  padding-right: 0.5em;
+  display: flex;
+}
+
+.AppBar-nickname {
+  font-weight: bold;
+  font-size: larger;
+}
+
+.AppBar-id {
+  font-size: x-small;
+  opacity: 0.3;
+  padding-top: 0.2em;
+}
+
+.AppBar-titles {
+  flex: 1;
+}
+
+.AppBar-icons {
+  margin-top: 0.3em;
+}
+
+.AppBar-icon {
+  text-decoration: none;
+  color: white;
+}

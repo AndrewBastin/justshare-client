@@ -11,6 +11,7 @@ import SelectFilePage from "./pages/SelectFilePage";
 import ReceiveFilePage from "./pages/ReceiveFilePage";
 import NicknamePage from "./pages/NicknamePage";
 import UnsupportedPage from "./pages/UnsupportedPage";
+import AppBar from './components/AppBar/AppBar';
 
 type ScreenType = 'nickname' | 'share-with' | 'select-file' | 'recieve';
 
@@ -223,16 +224,11 @@ const Ap: React.FC<{}> = () => {
 
     return (
         <div className="App">
-            <h3 style={{ textAlign: 'center' }}>JustShare [Alpha 24]</h3>
-            <p style={{ textAlign: 'center' }}>
-                {
-                    window.localStorage.getItem("nickname") ?
-                    `You are : ${nickname ? `${nickname} (id : ${socketID})` : socketID}`
-                    : ""
-                }
-                <br />
-                <a href="#" onClick={handleDeleteNicknameClick}>{nickname && currentScreen === 'share-with' ? "Delete Nickname" : ""}</a>
-            </p>
+            <AppBar 
+                nickname={nickname}
+                socketID={socketID}
+                onDeleteNickname={handleDeleteNicknameClick}
+            />
             { renderCurrentPage() }
         </div>
     );
