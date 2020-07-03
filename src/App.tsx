@@ -234,7 +234,7 @@ const Ap: React.FC<{}> = () => {
                 { renderCurrentPage() }
             </div>
             <div className="App-Footer">
-                JustShare [Alpha 25]
+                JustShare [Alpha 26]
             </div>
         </div>
     );
