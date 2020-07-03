@@ -12,16 +12,13 @@
 
 .App-ListItem {
   display: flex;
-  padding: 0.5em;
+  padding: 1em;
+  margin: 0.7em;
   clear: both;
-  border-top-color: rgb(61, 61, 61);
-  border-top-style: solid;
-  border-top-width: 1px;
-
-
-  border-bottom-color: rgb(61, 61, 61);
-  border-bottom-style: solid;
-  border-bottom-width: 1px;
+  border-color: rgb(34, 34, 34);
+  border-style: solid;
+  border-width: 1px;
+  border-radius: 0.2em;
 }
 
 .App-ListItem:hover {
