@@ -223,7 +223,7 @@ const Ap: React.FC<{}> = () => {
 
     return (
         <div className="App">
-            <h3 style={{ textAlign: 'center' }}>JustShare [Alpha 23]</h3>
+            <h3 style={{ textAlign: 'center' }}>JustShare [Alpha 24]</h3>
             <p style={{ textAlign: 'center' }}>
                 {
                     window.localStorage.getItem("nickname") ?
