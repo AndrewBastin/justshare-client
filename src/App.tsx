@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState, useLayoutEffect} from 'react';
 import './App.css';
 import FileSendRequest from './api/FileSendRequest';
 import FileSaver from 'file-saver';
@@ -12,154 +12,108 @@ import ReceiveFilePage from "./pages/ReceiveFilePage";
 import NicknamePage from "./pages/NicknamePage";
 import UnsupportedPage from "./pages/UnsupportedPage";
 
-interface State {
-    
-    peers: PeerInfo[],
-    
-    socketID: string,
-    
-    selectedPeerID?: string,
-       
-    fileRequest?: FileSendRequest | null, 
-    fileRequestAcceptCallback?: (accept: boolean) => void,
+type ScreenType = 'nickname' | 'share-with' | 'select-file' | 'recieve';
 
-    // Disable accept button because it is already been clicked (waiting for handshakes to complete)
-    lockAccept: boolean,
+const url = "https://justshare-server.herokuapp.com";
+//const url = "localhost:2299";
 
-    fileToSend?: File,
+let peerService: PeerService;
 
-    waitingForAccept: boolean,
+const Ap: React.FC<{}> = () => {
 
-    nickname: string | null,
+    const [peers, setPeers] = useState<PeerInfo[]>([]);
+    const [socketID, setSocketID] = useState<string>('');
+    const [selectedPeerID, setSelectedPeerID] = useState<string | null>(null);
+    const [fileRequest, setFileRequest] = useState<FileSendRequest | null>(null);
+    const [fileRequestAcceptCallback, setFileRequestAcceptCallback] = useState<((accept: boolean) => void) | null>(null);
+    const [lockAccept, setLockAccept] = useState<boolean>(false);
+    const [waitingForAccept, setWaitingForAccept] = useState<boolean>(false);
+    const [nickname, setNickname] = useState<string | null>(window.localStorage.getItem("nickname"));
+    const [currentScreen, setCurrentScreen] = useState<ScreenType>(nickname ? 'share-with' : 'nickname');
 
-    currentScreen: 'nickname' | 'share-with' | 'select-file' | 'recieve'
-}
+    // Setup Peer Service
+    useLayoutEffect(() => {
+        if (nickname) {
 
-export default class App extends React.Component<{}, State> {
-    
-    private peerService!: PeerService;
+            peerService = PeerService.createInstance(url, nickname);
 
-    constructor(props: {}, ctx: any) {
-        super(props, ctx);
-
-        this.state = {
-            peers: [],
-            socketID: '',
-            waitingForAccept: false,
-            lockAccept: false,
-            nickname: window.localStorage.getItem("nickname"),
-            currentScreen: window.localStorage.getItem("nickname") ? 'share-with' : 'nickname',
-        };
-
-        this.onShareWithPeerClick = this.onShareWithPeerClick.bind(this);
-        this.handleFileSelected = this.handleFileSelected.bind(this);
-        this.handleRecieveAccept = this.handleRecieveAccept.bind(this);
-    }
-
-    componentWillMount() {
-        if (this.state.nickname) {
-            this.setupPeerService();
-        }
-    }
-
-    setupPeerService() {
-
-        let url = "https://justshare-server.herokuapp.com";
-        //let url = "localhost:2299";
-
-        this.peerService = PeerService.createInstance(url, this.state.nickname!!);
-
-        this.peerService.on("sockConnected", (sock) => {
-            console.log(`Socket connected, ID : ${this.peerService.getSockID()}`);
-
-            this.setState({
-                socketID: this.peerService.getSockID()
-            })
-        });
-
-        this.peerService.on("peerUpdate", (peers) => {
-            this.setState({ peers: peers });
-
-            // Return back to share-with incase the sender just disconnects before accept
-            if (this.state.currentScreen === 'recieve') {
-                if (!peers.find((peer) => peer.peerID === this.state.fileRequest!!.shareID)) {
-                    this.setState({
-                        currentScreen: 'share-with'
-                    });
-                }
-            }
-        });
-
-        this.peerService.on("fileSendRequest", (req) => new Promise((resolve, reject) => {
-
-            this.setState({
-                currentScreen: 'recieve',
-                fileRequest: req,
-                fileRequestAcceptCallback: resolve
+            peerService.on("sockConnected", () => {
+                console.log(`Socket connected, ID : ${peerService.getSockID()}`);
+                setSocketID(peerService.getSockID());
             });
 
-        }));
+            peerService.on("peerUpdate", (peers) => {
+                setPeers(peers);
 
+                // Return back to share-with incase the sender just disconnects before accept
+                if (currentScreen === 'recieve') {
+                    if (!peers.find((peer) => peer.peerID === fileRequest!!.shareID)) {
+                        setCurrentScreen('share-with');
+                    }
+                }
+            });
+
+            peerService.on("fileSendRequest", (req) => new Promise((resolve, reject) => {
+                setFileRequest(req);
+                setFileRequestAcceptCallback(() => resolve);
+                setCurrentScreen('recieve');
+            }));
+        }
+
+        // Cleanup
+        return () => {
+            if (peerService) peerService.removeAllListeners();
+        }
+    }, [nickname]);
+
+    const handleDeleteNicknameClick = () => {
+        window.localStorage.removeItem("nickname");
+        setNickname(null);
+        window.location.reload(true);
     }
 
-    onShareWithPeerClick(peerID: string) {
-        this.setState({
-            selectedPeerID: peerID,
-            currentScreen: "select-file"
-        });
-    }
-
-    renderShareWith(): JSX.Element {
+    const renderNicknamePage = () => {
+        // TODO : Nickname validation
         return (
-            <ShareWithPage 
-                peers={this.state.peers}
-                onPeerSelect={this.onShareWithPeerClick}
+            <NicknamePage
+                handleNicknameSelect={(nickname) => {
+                    window.localStorage.setItem("nickname", nickname as string);
+                    setNickname(nickname);
+                    setCurrentScreen('share-with');
+                }}
             />
         );
     }
 
-    renderSelectFile(): JSX.Element {
-        return (
-            <SelectFilePage
-                waitingForAccept={this.state.waitingForAccept}
-                onFileSelect={this.handleFileSelected}
-            />
-        );
-    }
-
-    async handleFileSelected(ev: React.ChangeEvent<HTMLInputElement>) {
+    const handleFileSelected = async (ev: React.ChangeEvent<HTMLInputElement>) => {
         console.log(ev.target.files)
 
         let file = ev.target.files!![0]
 
-        this.setState({
-            waitingForAccept: true
-        });
+        setWaitingForAccept(true);
 
-        if (this.state.selectedPeerID) {
-            this.peerService.sendFileSendRequest(this.state.selectedPeerID, file)
+        if (selectedPeerID) {
+            peerService.sendFileSendRequest(selectedPeerID, file)
                 .then(([req, accepted] : [FileSendRequest, boolean]) => {
 
                     if (accepted) {
-                        this.peerService.on('fileSenderSession', (session) => {
+                        peerService.on('fileSenderSession', (session) => {
             
+                            console.log("Session")
                             session.on('done', () => {
                                 console.log("complete");
                             })
                             session.start();
             
-                            this.setState({
-                                currentScreen: 'share-with',
-                                waitingForAccept: false,
-                                fileRequest: null
-                            });
+                            setWaitingForAccept(false);
+                            setFileRequest(null);
+                            setCurrentScreen('share-with');
                         })
                     } else {
-                        this.setState({
-                            currentScreen: 'share-with',
-                            waitingForAccept: false,
-                            fileRequest: null
-                        });
+                        console.log("Denied");
+                        setWaitingForAccept(false);
+                        setFileRequest(null);
+                        setCurrentScreen('share-with');
                     }
 
                 })
@@ -170,25 +124,42 @@ export default class App extends React.Component<{}, State> {
         }
     }
 
-    renderRecieveFile(): JSX.Element {
+    const renderSelectFile = () => {
         return (
-            <ReceiveFilePage
-                peers={this.state.peers}
-                lockAccept={this.state.lockAccept}
-                fileRequest={this.state.fileRequest!!}
-                onReceiveDecision={this.handleRecieveAccept}
+            <SelectFilePage
+                waitingForAccept={waitingForAccept}
+                onFileSelect={handleFileSelected}
             />
         );
     }
 
-    handleRecieveAccept(accept: boolean) {
+    const onShareWithPeerClick = (peerID: string) => {
+        setSelectedPeerID(peerID);
+        setCurrentScreen('select-file');
+    }
 
-        this.setState({
-            lockAccept: true
-        });
+    const renderShareWith = () => {
+        if (PeerService.getInstance()) {
+            return (
+                <ShareWithPage 
+                    peers={peers}
+                    onPeerSelect={onShareWithPeerClick}
+                />
+            );
+        } else {
+            return (
+                <div>
+                </div>
+            );
+        }
+    }
+
+    const handleRecieveAccept = (accept: boolean) => {
+
+        setLockAccept(true);
         
         if (accept) {
-            this.peerService.on('fileReceiverSession', (session) => {
+            peerService.on('fileReceiverSession', (session) => {
     
                 session.on('done', (file, filename: string) => {
                     console.log(file);
@@ -197,41 +168,35 @@ export default class App extends React.Component<{}, State> {
                     console.log("complete");
                 });
                 session.start();
+
+                setLockAccept(false);
+                setCurrentScreen('share-with');
     
-                this.setState({
-                    currentScreen: 'share-with',
-                    lockAccept: false
-                });
             });
     
             // TODO : Handle not case
-            if (this.state.fileRequestAcceptCallback) this.state.fileRequestAcceptCallback(true);
+            if (fileRequestAcceptCallback) fileRequestAcceptCallback(true);
         } else {
 
-            this.setState({
-                currentScreen: 'share-with',
-                lockAccept: false
-            });
-
-            if (this.state.fileRequestAcceptCallback) this.state.fileRequestAcceptCallback(false);
+            setLockAccept(false);
+            setCurrentScreen('share-with');
+            
+            if (fileRequestAcceptCallback) fileRequestAcceptCallback(false);
         }
 
     }
-
-    renderNicknamePage(): JSX.Element {
-        // TODO : Nickname validation
+    const renderRecieveFile = () => {
         return (
-            <NicknamePage
-                handleNicknameSelect={(nickname) => {
-                    this.setupPeerService();
-                    window.localStorage.setItem("nickname", nickname as string);
-                    this.setState({ nickname: nickname, currentScreen: 'share-with' });
-                }}
+            <ReceiveFilePage
+                peers={peers}
+                lockAccept={lockAccept}
+                fileRequest={fileRequest!!}
+                onReceiveDecision={handleRecieveAccept}
             />
         );
     }
 
-    renderCurrentPage(): JSX.Element {
+    const renderCurrentPage = () => {
         // Override: Browser does not support WebRTC
         if (!Peer.WEBRTC_SUPPORT) {
             return (
@@ -239,14 +204,14 @@ export default class App extends React.Component<{}, State> {
             )
         }
 
-        if (this.state.currentScreen === 'nickname') {
-            return this.renderNicknamePage();
-        } else if (this.state.currentScreen === 'share-with') {
-            return this.renderShareWith();
-        } else if (this.state.currentScreen === 'select-file') {
-            return this.renderSelectFile();
-        } else if (this.state.currentScreen === 'recieve') {
-            return this.renderRecieveFile();  
+        if (currentScreen === 'nickname') {
+            return renderNicknamePage();
+        } else if (currentScreen === 'share-with') {
+            return renderShareWith();
+        } else if (currentScreen === 'select-file') {
+            return renderSelectFile();
+        } else if (currentScreen === 'recieve') {
+            return renderRecieveFile();  
         } else {
             return (
                 <div>
@@ -256,28 +221,21 @@ export default class App extends React.Component<{}, State> {
         }
     }
 
-    handleDeleteNicknameClick() {
-        window.localStorage.removeItem("nickname");
-        window.location.reload(true);
-    }
-    
-    public render(): JSX.Element {
-        return (
-            <div className="App">
-                <h3 style={{ textAlign: 'center' }}>JustShare [Alpha 23]</h3>
-                <p style={{ textAlign: 'center' }}>
-                    {
-                        window.localStorage.getItem("nickname") ?
-                        `You are : ${this.state.nickname ? `${this.state.nickname} (id : ${this.state.socketID})` : this.state.socketID}`
-                        : ""
-                    }
-                    <br />
-                    <a href="#" onClick={() => this.handleDeleteNicknameClick()}>{window.localStorage.getItem("nickname") && this.state.currentScreen === 'share-with' ? "Delete Nickname" : ""}</a>
-                </p>
-                { this.renderCurrentPage() }
-            </div>
-        )
-        
-    }
-
+    return (
+        <div className="App">
+            <h3 style={{ textAlign: 'center' }}>JustShare [Alpha 23]</h3>
+            <p style={{ textAlign: 'center' }}>
+                {
+                    window.localStorage.getItem("nickname") ?
+                    `You are : ${nickname ? `${nickname} (id : ${socketID})` : socketID}`
+                    : ""
+                }
+                <br />
+                <a href="#" onClick={handleDeleteNicknameClick}>{nickname && currentScreen === 'share-with' ? "Delete Nickname" : ""}</a>
+            </p>
+            { renderCurrentPage() }
+        </div>
+    );
 }
+
+export default Ap;
