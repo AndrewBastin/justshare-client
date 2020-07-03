@@ -1,6 +1,5 @@
 import { EventEmitter } from "ee-ts";
 import SimplePeer from "simple-peer";
-import { guid } from "../Crypto";
 import FileSendRequest from "../FileSendRequest";
 import through from "through";
 import FileStartMetadata from "./FileStartMetadata";
