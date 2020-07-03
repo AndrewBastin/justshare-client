@@ -65,6 +65,7 @@ const Ap: React.FC<{}> = () => {
         return () => {
             if (peerService) peerService.removeAllListeners();
         }
+    // eslint-disable-next-line
     }, [nickname]);
 
     const handleDeleteNicknameClick = () => {
