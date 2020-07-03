@@ -2,6 +2,9 @@ import React from 'react';
 import PeerInfo from '../api/PeerInfo';
 import FileSendRequest from '../api/FileSendRequest';
 import {fileSizeSI} from '../api/Size';
+import RoundButton from '../components/RoundButton/RoundButton';
+
+import { Done, Close } from '@material-ui/icons';
 
 interface Props {
   peers: PeerInfo[];
@@ -24,8 +27,33 @@ const ReceiveFilePage: React.FC<Props> = (props) => {
         Accept ?
         <br />
         <br />
-        <button disabled={props.lockAccept} onClick={() => props.onReceiveDecision(true) }>Accept</button>
-        <button disabled={props.lockAccept} onClick={() => props.onReceiveDecision(false) }>Deny</button>
+        <div
+          style={{
+            paddingLeft: '10%',
+            paddingRight: '10%'
+          }}
+        >
+          <div 
+            style={{
+              float: 'left',
+              clear: 'none'
+            }}
+          >
+            <RoundButton color={"green"} disabled={props.lockAccept} onClick={() => props.onReceiveDecision(true)}>
+              <Done />
+            </RoundButton>
+          </div>
+          <div
+            style={{
+              float: 'right',
+              clear: 'none'
+            }}
+          >
+            <RoundButton color={"red"} disabled={props.lockAccept} onClick={() => props.onReceiveDecision(false)}>
+              <Close />
+            </RoundButton>
+          </div>
+        </div>
       </p>
     </div>
   );
