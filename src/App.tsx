@@ -224,12 +224,17 @@ const Ap: React.FC<{}> = () => {
 
     return (
         <div className="App">
-            <AppBar 
-                nickname={nickname}
-                socketID={socketID}
-                onDeleteNickname={handleDeleteNicknameClick}
-            />
-            { renderCurrentPage() }
+            <div className="App-Content">
+                <AppBar 
+                    nickname={nickname}
+                    socketID={socketID}
+                    onDeleteNickname={handleDeleteNicknameClick}
+                />
+                { renderCurrentPage() }
+            </div>
+            <div className="App-Footer">
+                JustShare [Alpha 24]
+            </div>
         </div>
     );
 }
