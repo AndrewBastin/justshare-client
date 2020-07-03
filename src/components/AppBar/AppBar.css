@@ -30,4 +30,7 @@
 .AppBar-icon {
   text-decoration: none;
   color: white;
+  border: 0;
+  background: transparent;
+  padding: 0;
 }

@@ -19,9 +19,9 @@ const AppBar: React.FC<Props> = (props) => {
           <div className="AppBar-id">{props.socketID}</div>
         </div>
         <div className="AppBar-icons">
-          <a className="AppBar-icon" href="#" onClick={props.onDeleteNickname}>
+          <button className="AppBar-icon" onClick={props.onDeleteNickname}>
             <Delete />
-          </a>
+          </button>
         </div>
       </div>
     );
