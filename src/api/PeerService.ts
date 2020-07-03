@@ -67,7 +67,6 @@ export default class PeerService extends EventEmitter<Events> {
 		this.peers = [];
 		this.jobs = new Map<string, JobInfo>();
 		
-		
 		this.socket.on('connect', () => {
 			
 			this.socket.emit("declare nickname", this.nickname);
@@ -169,6 +168,10 @@ export default class PeerService extends EventEmitter<Events> {
 	
 	getNickname(): string {
 		return this.nickname;
+	}
+
+	removeAllListeners() {
+		this.socket.removeAllListeners();
 	}
 	
 	// Returns a promise that returns the corresponding FileSendRequest and whether the request was accepted
