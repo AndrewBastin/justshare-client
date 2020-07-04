@@ -12,6 +12,7 @@ import ReceiveFilePage from "./pages/ReceiveFilePage";
 import NicknamePage from "./pages/NicknamePage";
 import UnsupportedPage from "./pages/UnsupportedPage";
 import AppBar from './components/AppBar/AppBar';
+import {AnimatePresence} from 'framer-motion';
 
 type ScreenType = 'nickname' | 'share-with' | 'select-file' | 'recieve';
 
@@ -231,7 +232,9 @@ const Ap: React.FC<{}> = () => {
                     socketID={socketID}
                     onDeleteNickname={handleDeleteNicknameClick}
                 />
-                { renderCurrentPage() }
+                <AnimatePresence>
+                    { renderCurrentPage() }
+                </AnimatePresence>
             </div>
             <div className="App-Footer">
                 JustShare [Alpha 26]

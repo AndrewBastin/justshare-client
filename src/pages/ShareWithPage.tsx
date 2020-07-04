@@ -11,7 +11,11 @@ interface Props {
 
 const ShareWithPage: React.FC<Props> = (props) => {
   return (
-    <div>
+    <motion.div
+      initial={{ opacity: 0, x: 200 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -200 }}
+    >
       <TransfersList />
       <div className="App-ListHeading">Share With</div>
       <div>
@@ -41,7 +45,7 @@ const ShareWithPage: React.FC<Props> = (props) => {
           })}
         </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

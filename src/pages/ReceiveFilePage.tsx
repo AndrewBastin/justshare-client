@@ -5,6 +5,7 @@ import {fileSizeSI} from '../api/Size';
 import RoundButton from '../components/RoundButton/RoundButton';
 
 import { Done, Close } from '@material-ui/icons';
+import {motion} from 'framer-motion';
 
 interface Props {
   peers: PeerInfo[];
@@ -17,7 +18,11 @@ const ReceiveFilePage: React.FC<Props> = (props) => {
   let senderInfo = props.peers.find(p => p.peerID === props.fileRequest.senderSocketID)
 
   return (
-    <div>
+    <motion.div
+      initial={{ opacity: 0, x: 200 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -200 }}
+    >
       <div className="App-ListHeading">Recieve</div>
       <p>
         { senderInfo ? senderInfo.nickname : props.fileRequest.senderSocketID } wants to send 
@@ -55,7 +60,7 @@ const ReceiveFilePage: React.FC<Props> = (props) => {
           </div>
         </div>
       </p>
-    </div>
+    </motion.div>
   );
 }
 

@@ -1,4 +1,5 @@
 import React, {useState} from 'react';
+import {motion} from 'framer-motion';
 
 interface Props {
   handleNicknameSelect: (nickname: string) => void;
@@ -10,7 +11,11 @@ const NicknamePage: React.FC<Props> = (props) => {
   const [nickname, setNickname] = useState("");
 
   return (
-    <div>
+    <motion.div
+      initial={{ opacity: 0, x: 200 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -200 }}
+    >
       <div className="App-ListHeading">Nickname</div>
       <div>Enter the nickname (you will be shown on other devices with this name) : </div>
       <input 
@@ -21,7 +26,7 @@ const NicknamePage: React.FC<Props> = (props) => {
       <button onClick={() => props.handleNicknameSelect(nickname)}>
         Done
       </button>
-    </div>
+    </motion.div>
   )
 }
 
