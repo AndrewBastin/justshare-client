@@ -13,6 +13,7 @@ import NicknamePage from "./pages/NicknamePage";
 import UnsupportedPage from "./pages/UnsupportedPage";
 import AppBar from './components/AppBar/AppBar';
 import {AnimatePresence} from 'framer-motion';
+import ReactLoading from 'react-loading';
 
 type ScreenType = 'nickname' | 'share-with' | 'select-file' | 'recieve';
 
@@ -205,6 +206,24 @@ const Ap: React.FC<{}> = () => {
             return (
                 <UnsupportedPage />
             )
+        }
+
+        if (!socketID) {
+            return (
+                <div
+                    style={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        height: '90%'
+                    }}
+                >
+                    <ReactLoading 
+                        type={'spin'}
+                        color={'#fff'}
+                    />
+                </div>
+            );
         }
 
         if (currentScreen === 'nickname') {
