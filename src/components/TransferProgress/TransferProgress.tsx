@@ -2,6 +2,7 @@ import * as React from 'react';
 import PeerFileSend from '../../api/file/PeerFileSend';
 import { fileSizeSI } from '../../api/Size';
 import JobInfo from '../../api/JobInfo';
+import {useState, useEffect} from 'react';
 
 interface Props {
 	job: JobInfo
@@ -11,66 +12,49 @@ interface State {
 	bytesCompleted: number
 }
 
-export default class TransferProgress extends React.Component<Props, State> {
+const TranProg: React.FC<Props> = (props) => {
+	const [bytesCompleted, setBytesCompleted] = useState(0);
 
-	constructor(props: Props, ctx: any) {
-		super(props, ctx);
-
-		this.state = {
-			bytesCompleted: 0
-		}
-
-		this.handleSendProgressUpdate = this.handleSendProgressUpdate.bind(this);
-		this.handleReceiveProgressUpdate = this.handleReceiveProgressUpdate.bind(this);
-		this.handleCancelButtonClick = this.handleCancelButtonClick.bind(this);
+	const handleCancelButtonClick = () => {
+		props.job.session.cancel();
 	}
 
-	private handleSendProgressUpdate(bytesSent: number) {
-		this.setState({
-			bytesCompleted: bytesSent
-		});
+	const handleSendProgressUpdate = (bytesSent: number) => {
+		setBytesCompleted(bytesSent);
 	}
 
-	private handleReceiveProgressUpdate(bytesReceived: number) {
-		this.setState({
-			bytesCompleted: bytesReceived
-		});
+	const handleReceiveProgressUpdate = (bytesReceived: number) => {
+		setBytesCompleted(bytesReceived);
 	}
 
-	componentDidMount() {
-
-		if (this.props.job.session instanceof PeerFileSend) {
-			this.props.job.session.on('progress', this.handleSendProgressUpdate);
+	// Job Update Notification Registration
+	useEffect(() => {
+		if (props.job.session instanceof PeerFileSend) {
+			props.job.session.on('progress', handleSendProgressUpdate);
 		} else {
-			this.props.job.session.on('progress', this.handleReceiveProgressUpdate);
+			props.job.session.on('progress', handleReceiveProgressUpdate);
 		}
 
-	}
-
-	componentWillUnmount() {
-
-		if (this.props.job.session instanceof PeerFileSend) {
-			this.props.job.session.off('progress', this.handleSendProgressUpdate);
-		} else {
-			this.props.job.session.off('progress', this.handleReceiveProgressUpdate);
+		// Cleanup
+		return () => {
+			if (props.job.session instanceof PeerFileSend) {
+				props.job.session.off('progress', handleSendProgressUpdate);
+			} else {
+				props.job.session.off('progress', handleReceiveProgressUpdate);
+			}
 		}
+	}, [props.job]);
+	
 
-	}
-
-	private handleCancelButtonClick() {
-		this.props.job.session.cancel();
-	}
-
-	public render(): JSX.Element {
-		return (
-			<div>
-				File: {this.props.job.request.filename} <br />
-				Done: {fileSizeSI(this.state.bytesCompleted)} ({Math.floor((this.state.bytesCompleted / this.props.job.request.filesizeBytes) * 100)} %)<br />
-				Total: {fileSizeSI(this.props.job.request.filesizeBytes)} <br />
-				
-				<button onClick={this.handleCancelButtonClick}>Cancel</button> <br />
-			</div>
-		)
-	}
-
+	return (
+		<div>
+			File: {props.job.request.filename} <br />
+			Done: {fileSizeSI(bytesCompleted)} ({Math.floor((bytesCompleted / props.job.request.filesizeBytes) * 100)} %)<br />
+			Total: {fileSizeSI(props.job.request.filesizeBytes)} <br />
+			
+			<button onClick={handleCancelButtonClick}>Cancel</button> <br />
+		</div>
+	);
 }
+
+export default TranProg;
