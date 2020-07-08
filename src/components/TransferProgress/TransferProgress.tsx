@@ -4,12 +4,10 @@ import { fileSizeSI } from '../../api/Size';
 import JobInfo from '../../api/JobInfo';
 import {useState, useEffect} from 'react';
 
+import './TransferProgress.css';
+
 interface Props {
 	job: JobInfo
-}
-
-interface State {
-	bytesCompleted: number
 }
 
 const TranProg: React.FC<Props> = (props) => {
@@ -27,9 +25,13 @@ const TranProg: React.FC<Props> = (props) => {
 		setBytesCompleted(bytesReceived);
 	}
 
+	const isTransferSending = () => {
+		return props.job.session instanceof PeerFileSend;
+	}
+
 	// Job Update Notification Registration
 	useEffect(() => {
-		if (props.job.session instanceof PeerFileSend) {
+		if (isTransferSending()) {
 			props.job.session.on('progress', handleSendProgressUpdate);
 		} else {
 			props.job.session.on('progress', handleReceiveProgressUpdate);
@@ -45,16 +47,18 @@ const TranProg: React.FC<Props> = (props) => {
 		}
 	}, [props.job]);
 	
-
 	return (
-		<div>
-			File: {props.job.request.filename} <br />
-			Done: {fileSizeSI(bytesCompleted)} ({Math.floor((bytesCompleted / props.job.request.filesizeBytes) * 100)} %)<br />
-			Total: {fileSizeSI(props.job.request.filesizeBytes)} <br />
+		<div className="TransferProgress">
+			<div className="TransferProgress-Type">{ isTransferSending() ? "SENDING" : "RECEIVING" }</div>
+			<div className="TransferProgress-Title">{props.job.request.filename}</div>
+			<div className="TransferProgress-Progress">
+				{fileSizeSI(bytesCompleted)}/{fileSizeSI(props.job.request.filesizeBytes)} ({Math.floor((bytesCompleted / props.job.request.filesizeBytes) * 100)} %)<br />
+			</div>
 			
-			<button onClick={handleCancelButtonClick}>Cancel</button> <br />
+			<button className="TransferProgress-Cancel" onClick={handleCancelButtonClick}>Cancel</button> <br />
 		</div>
 	);
+
 }
 
 export default TranProg;
