@@ -45,6 +45,7 @@ const TranProg: React.FC<Props> = (props) => {
 				props.job.session.off('progress', handleReceiveProgressUpdate);
 			}
 		}
+	// eslint-disable-next-line
 	}, [props.job]);
 	
 	return (
