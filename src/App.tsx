@@ -208,7 +208,7 @@ const Ap: React.FC<{}> = () => {
             )
         }
 
-        if (!socketID) {
+        if (!socketID && nickname) {
             return (
                 <div
                     style={{
