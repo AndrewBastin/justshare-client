@@ -256,7 +256,7 @@ const Ap: React.FC<{}> = () => {
                 </AnimatePresence>
             </div>
             <div className="App-Footer">
-                JustShare [Alpha 30]
+                JustShare [Alpha 31]
             </div>
         </div>
     );
