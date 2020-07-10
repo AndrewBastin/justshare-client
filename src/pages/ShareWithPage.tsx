@@ -3,6 +3,7 @@ import React from "react";
 import PeerInfo from '../api/PeerInfo';
 import TransfersList from '../components/TransfersList/TransfersList';
 import { AnimatePresence, motion } from 'framer-motion';
+import TransferTarget from "../components/TransferTarget/TransferTarget";
 
 interface Props {
   peers: PeerInfo[]
@@ -22,25 +23,11 @@ const ShareWithPage: React.FC<Props> = (props) => {
         <AnimatePresence>
           {props.peers.map((peer) => {
             return (
-              <motion.a
-                initial={{
-                  opacity: 0,
-                  scale: 0,
-                }}
-                animate={{
-                  opacity: 1,
-                  scale: 1,
-                }}
-                exit={{
-                  opacity: 0,
-                  scale: 0,
-                }}
-                className="App-ListItem"
+              <TransferTarget
                 key={peer.peerID}
-                onClick={() => props.onPeerSelect(peer.peerID)}
-              >
-                {peer.nickname ? peer.nickname : peer.peerID}
-              </motion.a>
+                peer={peer}
+                onPeerSelect={() => props.onPeerSelect(peer.peerID)}
+              />
             );
           })}
         </AnimatePresence>

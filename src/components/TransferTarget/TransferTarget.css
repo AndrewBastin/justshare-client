@@ -1,0 +1,15 @@
+.TransferTarget-ListItem {
+  display: flex;
+  padding: 1em;
+  margin: 0.7em;
+  clear: both;
+  border-color: rgb(34, 34, 34);
+  border-style: solid;
+  border-width: 1px;
+  border-radius: 0.2em;
+}
+
+.TransferTarget-ListItem:hover {
+  background: rgb(61, 61, 61);
+  cursor: pointer;
+}
