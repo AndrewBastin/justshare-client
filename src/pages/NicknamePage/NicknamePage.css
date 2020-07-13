@@ -1,0 +1,38 @@
+.NicknamePage-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.NicknamePage-caption {
+  padding-bottom: 4em;  
+  text-align: center;
+  opacity: 0.5;
+}
+
+.NicknamePage-entry {
+  margin-left: 1em;
+  margin-right: 1em;
+  margin-bottom: 4em;
+
+  background: transparent;
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.2);
+  padding-left: 0.5em;
+  padding-right: 0.5em;
+  padding-top: 1em;
+  padding-bottom: 1em;
+  font-size: 1.5em;
+  color: white;
+  text-align: center;
+  border-radius: 1em;
+}
+
+.NicknamePage-done {
+  align-self: center;
+  color: white;
+  background: green;
+  padding: 0.5em;
+  border: none;
+  font-size: 1.5em;
+  border-radius: 0.3em;
+}

@@ -9,7 +9,7 @@ import Peer from 'simple-peer';
 import ShareWithPage from "./pages/ShareWithPage";
 import SelectFilePage from "./pages/SelectFilePage";
 import ReceiveFilePage from "./pages/ReceiveFilePage";
-import NicknamePage from "./pages/NicknamePage";
+import NicknamePage from "./pages/NicknamePage/NicknamePage";
 import UnsupportedPage from "./pages/UnsupportedPage";
 import AppBar from './components/AppBar/AppBar';
 import {AnimatePresence} from 'framer-motion';
