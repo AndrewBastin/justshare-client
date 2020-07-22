@@ -21,15 +21,25 @@ const ShareWithPage: React.FC<Props> = (props) => {
       <div className="App-ListHeading">Share With</div>
       <div>
         <AnimatePresence>
-          {props.peers.map((peer) => {
-            return (
-              <TransferTarget
-                key={peer.peerID}
-                peer={peer}
-                onPeerSelect={() => props.onPeerSelect(peer.peerID)}
-              />
-            );
-          })}
+          {
+            (props.peers.length > 0) ? 
+                props.peers.map((peer) => {
+                    return (
+                        <TransferTarget
+                            key={peer.peerID}
+                            peer={peer}
+                            onPeerSelect={() => props.onPeerSelect(peer.peerID)}
+                        />
+                    );
+                })
+                :
+                (
+                    <div className="App-Message">
+                        No one else is here. <br />
+                        Open JustShare on the other device to begin sharing.
+                    </div>
+                )
+         }
         </AnimatePresence>
       </div>
     </motion.div>
