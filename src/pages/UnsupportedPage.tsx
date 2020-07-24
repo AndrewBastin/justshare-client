@@ -9,7 +9,7 @@ const UnsupportedPage: React.FC<{}> = () => {
       exit={{ opacity: 0, x: -200 }}
     >
       <div className="App-ListHeading">Unsupported</div>
-      <div>
+      <div className="App-Message">
         Your browser does not seem to support the technologies required for this
         program to work, please upgrade to a modern browser with WebRTC support.
       </div>
